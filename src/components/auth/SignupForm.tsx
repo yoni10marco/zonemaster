@@ -42,32 +42,28 @@ export function SignupForm() {
     setSubmitting(true)
     const supabase = createClient()
 
+    // Profile fields are passed as signup metadata rather than a follow-up
+    // `profiles` update: when email confirmation is required, signUp()
+    // returns no session, and an update from an unauthenticated client would
+    // be silently blocked by RLS. The handle_new_user trigger reads these
+    // from auth.users.raw_user_meta_data instead, which works either way.
     const { data, error } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
+      options: {
+        data: {
+          fitness_level: values.fitnessLevel,
+          primary_discipline: values.primaryDiscipline,
+          target_race_date: values.targetRaceDate || null,
+          target_race_distance: values.targetRaceDistance || null,
+        },
+      },
     })
 
     if (error) {
       toast.error(error.message)
       setSubmitting(false)
       return
-    }
-
-    const userId = data.user?.id
-    if (userId) {
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({
-          fitness_level: values.fitnessLevel as SignupInput["fitnessLevel"],
-          primary_discipline: values.primaryDiscipline as SignupInput["primaryDiscipline"],
-          target_race_date: values.targetRaceDate || null,
-          target_race_distance: values.targetRaceDistance || null,
-        })
-        .eq("id", userId)
-
-      if (profileError) {
-        toast.error(`Signed up, but saving your profile failed: ${profileError.message}`)
-      }
     }
 
     setSubmitting(false)

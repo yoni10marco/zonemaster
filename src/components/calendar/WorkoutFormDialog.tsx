@@ -276,8 +276,12 @@ export function WorkoutFormDialog({
                     type="button"
                     variant="outline"
                     onClick={() => {
+                      // Switching dialogState to "completion" in the parent
+                      // already unmounts this dialog (its render condition
+                      // stops matching) — an explicit onOpenChange(false)
+                      // here would fire a second, overwriting state update
+                      // in the same handler and could clobber the new state.
                       onLogCompletion(workout)
-                      onOpenChange(false)
                     }}
                   >
                     Log completion

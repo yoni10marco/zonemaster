@@ -48,7 +48,7 @@ export function DayColumn({
             isToday(date) && "text-primary"
           )}
         >
-          {compact ? date.getDate() : `${date.toLocaleDateString(undefined, { weekday: "short" })} ${date.getDate()}`}
+          {compact ? date.getDate() : `${date.toLocaleDateString("en-US", { weekday: "short" })} ${date.getDate()}`}
         </span>
         <Button
           type="button"

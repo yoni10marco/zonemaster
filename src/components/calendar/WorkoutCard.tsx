@@ -1,5 +1,6 @@
 "use client"
 
+import { useRef } from "react"
 import { useDraggable } from "@dnd-kit/core"
 import { CheckCircle2 } from "lucide-react"
 
@@ -15,11 +16,19 @@ type WorkoutCardProps = {
   onClick?: () => void
 }
 
+// dnd-kit's PointerSensor calls preventDefault() on pointerdown, which stops
+// the browser from ever synthesizing the follow-up "click" event — so a
+// plain onClick on a draggable node never fires. Detect a real click
+// ourselves by comparing pointerdown/pointerup positions instead.
+const CLICK_MOVEMENT_THRESHOLD_PX = 5
+
 export function WorkoutCard({ workout, completed, onClick }: WorkoutCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `workout-${workout.id}`,
     data: { workoutId: workout.id },
   })
+
+  const pointerDownPos = useRef<{ x: number; y: number } | null>(null)
 
   const style = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
@@ -33,7 +42,20 @@ export function WorkoutCard({ workout, completed, onClick }: WorkoutCardProps) {
       style={style}
       {...listeners}
       {...attributes}
-      onClick={onClick}
+      onPointerDown={(e) => {
+        pointerDownPos.current = { x: e.clientX, y: e.clientY }
+        listeners?.onPointerDown?.(e)
+      }}
+      onPointerUp={(e) => {
+        const start = pointerDownPos.current
+        pointerDownPos.current = null
+        if (!start || !onClick) return
+        const dx = Math.abs(e.clientX - start.x)
+        const dy = Math.abs(e.clientY - start.y)
+        if (dx < CLICK_MOVEMENT_THRESHOLD_PX && dy < CLICK_MOVEMENT_THRESHOLD_PX) {
+          onClick()
+        }
+      }}
       className={cn(
         "w-full rounded-md border p-2 text-left text-xs shadow-sm transition-opacity hover:shadow",
         isDragging && "opacity-50"

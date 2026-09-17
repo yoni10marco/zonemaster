@@ -1,7 +1,15 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core"
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -29,6 +37,11 @@ export default function CalendarPage() {
   const [view, setView] = useState<CalendarView>("week")
   const [anchor, setAnchor] = useState(new Date())
   const [activeDragId, setActiveDragId] = useState<number | null>(null)
+
+  // Require real pointer movement before a drag activates, so a plain click
+  // on a WorkoutCard still fires its onClick instead of being swallowed as a
+  // zero-distance drag.
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   const range = useMemo(
     () => (view === "week" ? weekRange(anchor) : monthRange(anchor)),
@@ -147,7 +160,7 @@ export default function CalendarPage() {
           ))}
         </div>
       ) : (
-        <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           {view === "week" ? (
             <WeekView
               days={range.days}

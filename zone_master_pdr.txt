@@ -1,0 +1,70 @@
+Product Requirements Document (PRD) – Zone Master
+1. Vision & Objective
+Zone Master is a web application designed for endurance athletes and triathletes (with a focus on Half Ironman and Ironman distances). It serves as a comprehensive tool for planning, tracking, and analyzing training routines. The platform is built around a "user-first" philosophy, granting athletes full manual control over their training calendar while providing a supportive wrapper of smart analytics, data synchronization, and on-demand AI coaching.
+
+2. Target Audience
+Primary: Amateur and age-group triathletes preparing for specific target races (e.g., Israman 70.3 in January) who need a clean, structured environment to manage their weekly training load.
+
+Secondary: General endurance sports enthusiasts (runners, cyclists, swimmers) looking for a unified platform to log activities and consult with an intelligent assistant.
+
+3. User Authentication & Onboarding
+Standard Authentication: The system will utilize standard email and password registration. Social/Google login will not be included in the initial MVP.
+
+Profile Setup: Upon registration, users define their current fitness level, primary discipline, and overarching goals (e.g., target race date and distance).
+
+Optional Strava Integration: A dedicated settings area allows users to securely authorize their Strava account via OAuth for automated workout synchronization.
+
+4. Core Features
+4.1 Manual-First Workout Scheduling
+Blank Canvas Calendar: A clean weekly and monthly calendar view. The schedule starts entirely empty, ensuring the user maintains full autonomy over their routine.
+
+Custom Workout Blocks: Users manually create training blocks for swimming, cycling, running, or strength conditioning. Blocks include target duration, distance, and intensity (e.g., specifying a 25km Zone 2 long run versus a Zone 3-4 speed interval session).
+
+Drag & Drop Interface: Seamlessly drag and drop scheduled workouts between days to quickly adjust to shifting personal schedules or weather constraints.
+
+4.2 Tracking & Performance Sync
+Automated Syncing: For connected Strava accounts, completed activities (distance, time, average pace/power, heart rate) are automatically pulled and matched against the planned workout for that day.
+
+Manual Entry (Fallback): Users can manually log completed workouts if they choose not to use integrations or if a session fails to sync (e.g., an indoor virtual ride on Zwift using a Wahoo KICKR). Required inputs include duration, distance, and a subjective Rate of Perceived Exertion (RPE on a scale of 1-10).
+
+Weekly Dashboard: Visual charts comparing planned versus actual training volume (hours and kilometers) across all disciplines to track progressive load accurately.
+
+4.3 On-Demand AI Coach
+Opt-In Smart Suggestions: A dedicated "Plan My Week" or "Suggest Workout" button. The AI does not auto-populate the calendar; instead, upon request, it analyzes the current training load and time left until race day, proposing specific workouts that the user must explicitly approve before they are added to the calendar.
+
+Conversational AI Assistant: A built-in chat interface with an AI that understands the user's logged history, target race, and upcoming plans.
+
+Example Queries:
+
+"I missed yesterday's swim; how should I adjust the rest of my week?"
+
+"What's a good energy gel nutrition strategy for tomorrow's 3-hour ride?"
+
+"Suggest a demanding indoor interval session for my smart trainer."
+
+4.4 Planning Notifications & Engagement
+Weekly Planning Alerts: Automated push notifications or emails sent at a fixed time at the start of the week (e.g., Sunday at 08:00 AM), reminding the user to sit down and map out their upcoming schedule.
+
+Weekly Review: The notification includes a brief, motivating summary of the past week’s completion rate (e.g., "You hit 85% of your planned volume last week. Let's plan the next block!").
+
+5. Technology Stack & Architecture
+To ensure a scalable, fast, and maintainable SaaS application, the following stack is outlined:
+
+Frontend: Built with Next.js for optimized performance, routing, and SEO benefits. Styled using Tailwind CSS for a highly responsive and modern UI.
+
+Backend & Database: Powered by Supabase (PostgreSQL) to efficiently handle relational data (users, scheduled workouts, metrics) alongside rapid API endpoints.
+
+Authentication: Managed via BetterAuth (or native Supabase Auth) for secure, standard email/password credential management.
+
+AI Integration: Utilizing LLM APIs (such as Gemini or OpenAI) combined with backend system prompts that feed the user's recent training data into the AI's context window for highly personalized coaching responses.
+
+6. High-Level Database Schema
+Users: User ID, Email, Hashed Password, Target Race Date, Current Fitness Level.
+
+Integrations: Strava OAuth tokens (for opted-in users).
+
+Planned_Workouts: Scheduled calendar entries (Target Date, Discipline, Planned Duration, Planned Distance, Target Zone/Intensity).
+
+Completed_Workouts: Executed sessions (Source [Manual/Strava], Execution Date, Actual Duration, Actual Distance, RPE).
+
+AI_Chat_History: Conversation logs with the AI coach to maintain context across different sessions.

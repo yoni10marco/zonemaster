@@ -1,0 +1,57 @@
+"use client"
+
+import { useDraggable } from "@dnd-kit/core"
+import { CheckCircle2 } from "lucide-react"
+
+import { Badge } from "@/components/ui/badge"
+import type { PlannedWorkout } from "@/hooks/usePlannedWorkouts"
+import { DISCIPLINE_LABELS, ZONE_LABELS } from "@/lib/types/domain"
+import { DISCIPLINE_STYLES } from "@/lib/utils/discipline-style"
+import { cn } from "@/lib/utils"
+
+type WorkoutCardProps = {
+  workout: PlannedWorkout
+  completed?: boolean
+  onClick?: () => void
+}
+
+export function WorkoutCard({ workout, completed, onClick }: WorkoutCardProps) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `workout-${workout.id}`,
+    data: { workoutId: workout.id },
+  })
+
+  const style = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
+    : undefined
+
+  const style_ = DISCIPLINE_STYLES[workout.discipline]
+
+  return (
+    <button
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+      onClick={onClick}
+      className={cn(
+        "w-full rounded-md border p-2 text-left text-xs shadow-sm transition-opacity hover:shadow",
+        isDragging && "opacity-50"
+      )}
+    >
+      <div className="flex items-center justify-between gap-1">
+        <Badge className={cn("border-0", style_.badge)}>{DISCIPLINE_LABELS[workout.discipline]}</Badge>
+        {completed && <CheckCircle2 className="size-3.5 text-green-600" />}
+      </div>
+      {workout.title && <div className="mt-1 truncate font-medium">{workout.title}</div>}
+      <div className="mt-1 text-muted-foreground">
+        {workout.planned_duration_minutes ? `${workout.planned_duration_minutes} min` : null}
+        {workout.planned_duration_minutes && workout.planned_distance_km ? " · " : null}
+        {workout.planned_distance_km ? `${workout.planned_distance_km} km` : null}
+      </div>
+      {workout.target_zone && (
+        <div className="mt-0.5 text-muted-foreground">{ZONE_LABELS[workout.target_zone]}</div>
+      )}
+    </button>
+  )
+}

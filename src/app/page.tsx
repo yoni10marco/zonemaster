@@ -1,8 +1,8 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { Zap } from "lucide-react"
 
 import { BackgroundIcons } from "@/components/layout/BackgroundIcons"
+import { ZoneLogo } from "@/components/layout/ZoneLogo"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/server"
 
@@ -21,7 +21,7 @@ export default async function Home() {
       <BackgroundIcons />
       <div className="space-y-3">
         <div className="flex items-center justify-center gap-2">
-          <Zap className="size-8 text-brand-blue" />
+          <ZoneLogo className="size-11" />
           <h1 className="bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text font-heading text-4xl font-semibold tracking-tight text-transparent">
             Zone Master
           </h1>

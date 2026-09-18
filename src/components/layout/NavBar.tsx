@@ -1,7 +1,8 @@
 import Link from "next/link"
-import { CalendarDays, LayoutDashboard, Sparkles, Zap } from "lucide-react"
+import { CalendarDays, LayoutDashboard, Sparkles } from "lucide-react"
 
 import { UserMenu } from "@/components/layout/UserMenu"
+import { ZoneLogo } from "@/components/layout/ZoneLogo"
 
 export function NavBar({ email }: { email: string }) {
   return (
@@ -10,9 +11,10 @@ export function NavBar({ email }: { email: string }) {
         <nav className="flex min-w-0 items-center gap-3 sm:gap-6">
           <Link
             href="/calendar"
+            aria-label="Zone Master"
             className="flex shrink-0 items-center gap-1.5 font-heading text-base font-semibold text-primary sm:text-lg"
           >
-            <Zap className="size-5 shrink-0" />
+            <ZoneLogo className="size-7 shrink-0" />
             <span className="hidden sm:inline">Zone Master</span>
           </Link>
           <Link

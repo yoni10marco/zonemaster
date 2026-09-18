@@ -1,3 +1,5 @@
+import { Link2, UserCog } from "lucide-react"
+
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ProfileEditForm } from "@/components/auth/ProfileEditForm"
@@ -12,7 +14,10 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Training profile</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <UserCog className="size-4 text-primary" />
+            Training profile
+          </CardTitle>
           <CardDescription>Used to tailor your training plan and, later, AI coaching.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -23,7 +28,10 @@ export default function SettingsPage() {
       <Card className="opacity-60">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Strava</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Link2 className="size-4" />
+              Strava
+            </CardTitle>
             <Badge variant="secondary">Coming soon</Badge>
           </div>
           <CardDescription>

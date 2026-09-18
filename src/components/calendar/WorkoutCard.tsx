@@ -7,7 +7,7 @@ import { CheckCircle2, Circle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import type { PlannedWorkout } from "@/hooks/usePlannedWorkouts"
 import { DISCIPLINE_LABELS, ZONE_LABELS } from "@/lib/types/domain"
-import { DISCIPLINE_STYLES } from "@/lib/utils/discipline-style"
+import { DISCIPLINE_ICONS, DISCIPLINE_STYLES } from "@/lib/utils/discipline-style"
 import { cn } from "@/lib/utils"
 
 type WorkoutCardProps = {
@@ -37,6 +37,7 @@ export function WorkoutCard({ workout, completed, onClick, onMarkDone }: Workout
     : undefined
 
   const style_ = DISCIPLINE_STYLES[workout.discipline]
+  const Icon = DISCIPLINE_ICONS[workout.discipline]
 
   return (
     // A native <button> can't contain the nested "mark done" <button> below,
@@ -73,7 +74,10 @@ export function WorkoutCard({ workout, completed, onClick, onMarkDone }: Workout
       )}
     >
       <div className="flex items-center justify-between gap-1">
-        <Badge className={cn("border-0", style_.badge)}>{DISCIPLINE_LABELS[workout.discipline]}</Badge>
+        <Badge className={cn("gap-1 border-0", style_.badge)}>
+          <Icon className="size-3" />
+          {DISCIPLINE_LABELS[workout.discipline]}
+        </Badge>
         {completed ? (
           <CheckCircle2 className="size-3.5 text-green-600" />
         ) : (

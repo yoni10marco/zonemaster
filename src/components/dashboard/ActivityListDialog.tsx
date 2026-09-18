@@ -14,6 +14,7 @@ import type { Tables } from "@/lib/types/database.types"
 import type { Discipline } from "@/lib/types/domain"
 import { DISCIPLINE_LABELS } from "@/lib/types/domain"
 import { format } from "@/lib/utils/dates"
+import { DISCIPLINE_ICONS } from "@/lib/utils/discipline-style"
 
 type CompletedWorkout = Tables<"completed_workouts">
 
@@ -54,11 +55,16 @@ export function ActivityListDialog({ discipline, onOpenChange }: ActivityListDia
     }
   }, [discipline])
 
+  const Icon = discipline ? DISCIPLINE_ICONS[discipline] : null
+
   return (
     <Dialog open={!!discipline} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{discipline ? DISCIPLINE_LABELS[discipline] : ""} activities</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            {Icon && <Icon className="size-4 text-primary" />}
+            {discipline ? DISCIPLINE_LABELS[discipline] : ""} activities
+          </DialogTitle>
         </DialogHeader>
         {loading ? (
           <div className="space-y-2">
@@ -67,9 +73,10 @@ export function ActivityListDialog({ discipline, onOpenChange }: ActivityListDia
             <Skeleton className="h-10 w-full" />
           </div>
         ) : activities.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
+          <div className="flex flex-col items-center gap-2 py-6 text-center text-sm text-muted-foreground">
+            {Icon && <Icon className="size-8 text-muted-foreground/50" />}
             No {discipline ? DISCIPLINE_LABELS[discipline].toLowerCase() : ""} activities logged yet.
-          </p>
+          </div>
         ) : (
           <div className="max-h-96 divide-y overflow-y-auto">
             {activities.map((activity) => (

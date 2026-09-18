@@ -1,3 +1,5 @@
+import { Target } from "lucide-react"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { SessionCompletion } from "@/lib/utils/volume"
 
@@ -5,9 +7,10 @@ type SessionCompletionCardProps = SessionCompletion & { periodLabel: string }
 
 export function SessionCompletionCard({ completed, total, periodLabel }: SessionCompletionCardProps) {
   return (
-    <Card>
+    <Card className="border-primary/20 bg-gradient-to-br from-brand-blue/5 to-brand-cyan/10">
       <CardHeader>
-        <CardTitle className="text-sm font-medium text-muted-foreground">
+        <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <Target className="size-4 text-primary" />
           {periodLabel} completion rate
         </CardTitle>
       </CardHeader>
@@ -15,7 +18,7 @@ export function SessionCompletionCard({ completed, total, periodLabel }: Session
         {total === 0 ? (
           <p className="text-2xl font-semibold text-muted-foreground">No plan yet</p>
         ) : (
-          <p className="text-3xl font-semibold">
+          <p className="text-3xl font-semibold text-primary">
             {completed} / {total}
           </p>
         )}

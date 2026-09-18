@@ -26,6 +26,8 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-cyan: var(--brand-cyan);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -36,51 +38,57 @@
 }
 
 /*
- * A warm, energetic palette instead of shadcn's default flat grayscale —
- * a teal primary (water/endurance) on warm off-white, not stark white/black.
- * See feedback-ui-redesign memory for the rationale.
+ * Blue-to-cyan brand palette on a cool near-white — chrome (buttons, focus
+ * rings, links, the brand gradient) lives in this range. Discipline badges
+ * stay their own multi-hue set on purpose: a categorical legend needs hue
+ * variety to stay scannable, so forcing every discipline into blue/cyan
+ * would work against the thing badges are for. See discipline-style.ts.
  */
 :root {
-  --background: oklch(0.985 0.004 75);
-  --foreground: oklch(0.22 0.02 260);
+  --background: oklch(0.99 0.006 240);
+  --foreground: oklch(0.2 0.03 255);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.22 0.02 260);
+  --card-foreground: oklch(0.2 0.03 255);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.22 0.02 260);
-  --primary: oklch(0.56 0.13 175);
-  --primary-foreground: oklch(0.985 0.01 175);
-  --secondary: oklch(0.95 0.02 80);
-  --secondary-foreground: oklch(0.32 0.03 80);
-  --muted: oklch(0.96 0.01 80);
-  --muted-foreground: oklch(0.52 0.02 260);
-  --accent: oklch(0.93 0.05 45);
-  --accent-foreground: oklch(0.32 0.08 40);
+  --popover-foreground: oklch(0.2 0.03 255);
+  --primary: oklch(0.55 0.2 260);
+  --primary-foreground: oklch(0.99 0.01 260);
+  --secondary: oklch(0.94 0.03 220);
+  --secondary-foreground: oklch(0.3 0.05 240);
+  --muted: oklch(0.96 0.015 230);
+  --muted-foreground: oklch(0.5 0.02 250);
+  --accent: oklch(0.9 0.08 200);
+  --accent-foreground: oklch(0.28 0.09 220);
   --destructive: oklch(0.58 0.22 25);
-  --border: oklch(0.9 0.012 80);
-  --input: oklch(0.9 0.012 80);
-  --ring: oklch(0.56 0.13 175);
+  --border: oklch(0.9 0.015 230);
+  --input: oklch(0.9 0.015 230);
+  --ring: oklch(0.65 0.15 220);
+  --brand-blue: oklch(0.55 0.2 260);
+  --brand-cyan: oklch(0.72 0.15 195);
   --radius: 0.75rem;
 }
 
 .dark {
-  --background: oklch(0.18 0.015 250);
-  --foreground: oklch(0.95 0.01 80);
-  --card: oklch(0.23 0.015 250);
-  --card-foreground: oklch(0.95 0.01 80);
-  --popover: oklch(0.23 0.015 250);
-  --popover-foreground: oklch(0.95 0.01 80);
-  --primary: oklch(0.7 0.14 175);
-  --primary-foreground: oklch(0.15 0.02 175);
-  --secondary: oklch(0.28 0.02 250);
-  --secondary-foreground: oklch(0.95 0.01 80);
-  --muted: oklch(0.26 0.015 250);
-  --muted-foreground: oklch(0.68 0.015 80);
-  --accent: oklch(0.32 0.05 40);
-  --accent-foreground: oklch(0.92 0.03 45);
+  --background: oklch(0.16 0.02 255);
+  --foreground: oklch(0.95 0.01 230);
+  --card: oklch(0.21 0.02 255);
+  --card-foreground: oklch(0.95 0.01 230);
+  --popover: oklch(0.21 0.02 255);
+  --popover-foreground: oklch(0.95 0.01 230);
+  --primary: oklch(0.68 0.18 250);
+  --primary-foreground: oklch(0.13 0.02 250);
+  --secondary: oklch(0.27 0.025 250);
+  --secondary-foreground: oklch(0.95 0.01 230);
+  --muted: oklch(0.25 0.02 250);
+  --muted-foreground: oklch(0.66 0.02 235);
+  --accent: oklch(0.3 0.08 205);
+  --accent-foreground: oklch(0.85 0.09 200);
   --destructive: oklch(0.68 0.2 25);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.7 0.14 175);
+  --ring: oklch(0.72 0.16 205);
+  --brand-blue: oklch(0.68 0.18 250);
+  --brand-cyan: oklch(0.78 0.14 195);
 }
 
 @layer base {

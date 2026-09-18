@@ -10,6 +10,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core"
+import { CalendarPlus, CalendarX2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -183,6 +184,7 @@ export default function CalendarPage() {
               })
             }
           >
+            <CalendarPlus className="size-4" />
             Log a workout
           </Button>
           <Tabs value={view} onValueChange={(v) => setView(v as CalendarView)}>
@@ -229,9 +231,10 @@ export default function CalendarPage() {
       )}
 
       {workouts.length === 0 && !loading && (
-        <p className="py-8 text-center text-sm text-muted-foreground">
+        <div className="flex flex-col items-center gap-2 py-8 text-center text-sm text-muted-foreground">
+          <CalendarX2 className="size-8 text-muted-foreground/50" />
           No workouts yet &mdash; click the + on any day to add your first one.
-        </p>
+        </div>
       )}
 
       {dialogState?.type === "workout" && (

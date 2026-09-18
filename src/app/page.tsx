@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
+import { Zap } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/server"
@@ -17,7 +18,12 @@ export default async function Home() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 bg-background px-6 text-center">
       <div className="space-y-3">
-        <h1 className="font-heading text-4xl font-semibold tracking-tight">Zone Master</h1>
+        <div className="flex items-center justify-center gap-2">
+          <Zap className="size-8 text-brand-blue" />
+          <h1 className="bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text font-heading text-4xl font-semibold tracking-tight text-transparent">
+            Zone Master
+          </h1>
+        </div>
         <p className="max-w-sm text-muted-foreground">
           Plan, track, and analyze your endurance training &mdash; on your terms.
         </p>

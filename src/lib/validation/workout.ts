@@ -23,19 +23,14 @@ export const plannedWorkoutSchema = z
 
 export type PlannedWorkoutInput = z.infer<typeof plannedWorkoutSchema>
 
-export const completionSchema = z
-  .object({
-    executionDate: z.string().min(1, "Date is required"),
-    discipline: z.enum(DISCIPLINES),
-    actualDurationMinutes: z.string().optional(),
-    actualDistanceKm: z.string().optional(),
-    rpe: z.number().min(1, "RPE must be between 1 and 10").max(10, "RPE must be between 1 and 10"),
-    notes: z.string().max(2000).optional(),
-  })
-  .refine((data) => hasValue(data.actualDurationMinutes) || hasValue(data.actualDistanceKm), {
-    message: "Enter a duration or a distance",
-    path: ["actualDurationMinutes"],
-  })
+export const completionSchema = z.object({
+  executionDate: z.string().min(1, "Date is required"),
+  discipline: z.enum(DISCIPLINES),
+  actualDurationMinutes: z.string().optional(),
+  actualDistanceKm: z.string().optional(),
+  rpe: z.number().min(1, "RPE must be between 1 and 10").max(10, "RPE must be between 1 and 10"),
+  notes: z.string().max(2000).optional(),
+})
 
 export type CompletionInput = z.infer<typeof completionSchema>
 

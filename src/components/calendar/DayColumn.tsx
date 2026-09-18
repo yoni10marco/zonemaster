@@ -16,6 +16,7 @@ type DayColumnProps = {
   completedWorkoutIds: Set<number>
   onAdd: (dateISO: string) => void
   onWorkoutClick: (workout: PlannedWorkout) => void
+  onMarkDone: (workout: PlannedWorkout) => void
   compact?: boolean
   dimmed?: boolean
 }
@@ -26,6 +27,7 @@ export function DayColumn({
   completedWorkoutIds,
   onAdd,
   onWorkoutClick,
+  onMarkDone,
   compact,
   dimmed,
 }: DayColumnProps) {
@@ -67,6 +69,7 @@ export function DayColumn({
             workout={workout}
             completed={completedWorkoutIds.has(workout.id)}
             onClick={() => onWorkoutClick(workout)}
+            onMarkDone={() => onMarkDone(workout)}
           />
         ))}
       </div>

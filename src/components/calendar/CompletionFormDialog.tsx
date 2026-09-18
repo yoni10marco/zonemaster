@@ -89,23 +89,36 @@ export function CompletionFormDialog({
     setSubmitting(true)
     try {
       let plannedWorkoutId = plannedWorkout?.id ?? null
+      let fallbackDuration = plannedWorkout?.planned_duration_minutes ?? null
+      let fallbackDistance = plannedWorkout?.planned_distance_km ?? null
 
       if (!plannedWorkoutId) {
-        const candidateId = await findLinkCandidate(values.executionDate, values.discipline)
-        if (candidateId) {
+        const candidate = await findLinkCandidate(values.executionDate, values.discipline)
+        if (candidate) {
           const confirmed = window.confirm(
             `Link this to your planned ${values.discipline} workout on ${values.executionDate}?`
           )
-          if (confirmed) plannedWorkoutId = candidateId
+          if (confirmed) {
+            plannedWorkoutId = candidate.id
+            fallbackDuration = candidate.planned_duration_minutes
+            fallbackDistance = candidate.planned_distance_km
+          }
         }
       }
+
+      const enteredDuration = parseOptionalNumber(values.actualDurationMinutes)
+      const enteredDistance = parseOptionalNumber(values.actualDistanceKm)
+      // Leaving both blank means "I just want to mark this done" rather than
+      // "I did nothing" — default to the plan instead of storing an empty
+      // actual, so a quick log never reads as an incomplete workout.
+      const loggedNothing = enteredDuration === null && enteredDistance === null
 
       await logCompletion({
         planned_workout_id: plannedWorkoutId,
         execution_date: values.executionDate,
         discipline: values.discipline as PlannedWorkout["discipline"],
-        actual_duration_minutes: parseOptionalNumber(values.actualDurationMinutes),
-        actual_distance_km: parseOptionalNumber(values.actualDistanceKm),
+        actual_duration_minutes: loggedNothing ? fallbackDuration : enteredDuration,
+        actual_distance_km: loggedNothing ? fallbackDistance : enteredDistance,
         rpe: values.rpe,
         notes: values.notes || null,
         source: "manual",
@@ -171,13 +184,17 @@ export function CompletionFormDialog({
               )}
             />
 
+            <p className="text-xs text-muted-foreground">
+              Leave duration and distance blank to just mark it completed as planned.
+            </p>
+
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="actualDurationMinutes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Duration (min)</FormLabel>
+                    <FormLabel>Duration (min, optional)</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -196,7 +213,7 @@ export function CompletionFormDialog({
                 name="actualDistanceKm"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Distance (km)</FormLabel>
+                    <FormLabel>Distance (km, optional)</FormLabel>
                     <FormControl>
                       <Input
                         type="number"

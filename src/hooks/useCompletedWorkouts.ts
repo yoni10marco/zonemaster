@@ -64,11 +64,13 @@ export function useCompletedWorkouts(rangeStart: Date, rangeEnd: Date) {
 
   // Find an existing planned workout for the same date+discipline with no
   // linked completion yet, so a standalone log can prompt to link to it.
+  // Returns the planned duration/distance too, so a completion left blank
+  // can default to "completed as planned" rather than an empty actual.
   async function findLinkCandidate(executionDate: string, discipline: Discipline) {
     const supabase = createClient()
     const { data: planned, error: plannedError } = await supabase
       .from("planned_workouts")
-      .select("id")
+      .select("id, planned_duration_minutes, planned_distance_km")
       .eq("target_date", executionDate)
       .eq("discipline", discipline)
 
@@ -87,7 +89,7 @@ export function useCompletedWorkouts(rangeStart: Date, rangeEnd: Date) {
     const linkedIds = new Set(linked.map((l) => l.planned_workout_id))
     const candidates = planned.filter((p) => !linkedIds.has(p.id))
 
-    return candidates.length === 1 ? candidates[0].id : null
+    return candidates.length === 1 ? candidates[0] : null
   }
 
   return { completions, loading, error, refetch, logCompletion, findLinkCandidate }

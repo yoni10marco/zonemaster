@@ -10,6 +10,7 @@ type WeekViewProps = {
   completedWorkoutIds: Set<number>
   onAdd: (dateISO: string) => void
   onWorkoutClick: (workout: PlannedWorkout) => void
+  onMarkDone: (workout: PlannedWorkout) => void
 }
 
 export function WeekView({
@@ -18,6 +19,7 @@ export function WeekView({
   completedWorkoutIds,
   onAdd,
   onWorkoutClick,
+  onMarkDone,
 }: WeekViewProps) {
   return (
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-7">
@@ -31,6 +33,7 @@ export function WeekView({
             completedWorkoutIds={completedWorkoutIds}
             onAdd={onAdd}
             onWorkoutClick={onWorkoutClick}
+            onMarkDone={onMarkDone}
           />
         )
       })}

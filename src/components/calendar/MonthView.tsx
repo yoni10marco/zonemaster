@@ -11,6 +11,7 @@ type MonthViewProps = {
   completedWorkoutIds: Set<number>
   onAdd: (dateISO: string) => void
   onWorkoutClick: (workout: PlannedWorkout) => void
+  onMarkDone: (workout: PlannedWorkout) => void
 }
 
 export function MonthView({
@@ -20,6 +21,7 @@ export function MonthView({
   completedWorkoutIds,
   onAdd,
   onWorkoutClick,
+  onMarkDone,
 }: MonthViewProps) {
   return (
     <div className="grid grid-cols-7 gap-1.5">
@@ -33,6 +35,7 @@ export function MonthView({
             completedWorkoutIds={completedWorkoutIds}
             onAdd={onAdd}
             onWorkoutClick={onWorkoutClick}
+            onMarkDone={onMarkDone}
             compact
             dimmed={day.getMonth() !== anchor.getMonth()}
           />

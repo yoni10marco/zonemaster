@@ -91,6 +91,24 @@ export default function CalendarPage() {
     setDialogState({ type: "workout", date: workout.target_date, workout })
   }
 
+  async function handleMarkDone(workout: PlannedWorkout) {
+    try {
+      await logCompletion({
+        planned_workout_id: workout.id,
+        execution_date: workout.target_date,
+        discipline: workout.discipline,
+        actual_duration_minutes: workout.planned_duration_minutes,
+        actual_distance_km: workout.planned_distance_km,
+        rpe: null,
+        notes: null,
+        source: "manual",
+      })
+      toast.success("Marked as done")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to mark done")
+    }
+  }
+
   function handleDragStart(event: DragStartEvent) {
     const id = event.active.data.current?.workoutId as number | undefined
     setActiveDragId(id ?? null)
@@ -168,6 +186,7 @@ export default function CalendarPage() {
               completedWorkoutIds={completedWorkoutIds}
               onAdd={handleAdd}
               onWorkoutClick={handleWorkoutClick}
+              onMarkDone={handleMarkDone}
             />
           ) : (
             <MonthView
@@ -177,6 +196,7 @@ export default function CalendarPage() {
               completedWorkoutIds={completedWorkoutIds}
               onAdd={handleAdd}
               onWorkoutClick={handleWorkoutClick}
+              onMarkDone={handleMarkDone}
             />
           )}
           <DragOverlay>

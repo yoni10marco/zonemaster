@@ -2,7 +2,7 @@
 
 import { useRef } from "react"
 import { useDraggable } from "@dnd-kit/core"
-import { CheckCircle2 } from "lucide-react"
+import { CheckCircle2, Circle } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import type { PlannedWorkout } from "@/hooks/usePlannedWorkouts"
@@ -14,6 +14,8 @@ type WorkoutCardProps = {
   workout: PlannedWorkout
   completed?: boolean
   onClick?: () => void
+  /** One-click "mark done as planned" — no dialog, no numbers to enter. */
+  onMarkDone?: () => void
 }
 
 // dnd-kit's PointerSensor calls preventDefault() on pointerdown, which stops
@@ -22,7 +24,7 @@ type WorkoutCardProps = {
 // ourselves by comparing pointerdown/pointerup positions instead.
 const CLICK_MOVEMENT_THRESHOLD_PX = 5
 
-export function WorkoutCard({ workout, completed, onClick }: WorkoutCardProps) {
+export function WorkoutCard({ workout, completed, onClick, onMarkDone }: WorkoutCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `workout-${workout.id}`,
     data: { workoutId: workout.id },
@@ -37,7 +39,10 @@ export function WorkoutCard({ workout, completed, onClick }: WorkoutCardProps) {
   const style_ = DISCIPLINE_STYLES[workout.discipline]
 
   return (
-    <button
+    // A native <button> can't contain the nested "mark done" <button> below,
+    // so this is a div with role="button" instead, keeping the same
+    // pointerdown/pointerup click detection dnd-kit needs.
+    <div
       ref={setNodeRef}
       style={style}
       {...listeners}
@@ -56,14 +61,38 @@ export function WorkoutCard({ workout, completed, onClick }: WorkoutCardProps) {
           onClick()
         }
       }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          onClick?.()
+        }
+      }}
       className={cn(
-        "w-full rounded-md border p-2 text-left text-xs shadow-sm transition-opacity hover:shadow",
+        "w-full cursor-pointer rounded-md border p-2 text-left text-xs shadow-sm transition-opacity hover:shadow",
         isDragging && "opacity-50"
       )}
     >
       <div className="flex items-center justify-between gap-1">
         <Badge className={cn("border-0", style_.badge)}>{DISCIPLINE_LABELS[workout.discipline]}</Badge>
-        {completed && <CheckCircle2 className="size-3.5 text-green-600" />}
+        {completed ? (
+          <CheckCircle2 className="size-3.5 text-green-600" />
+        ) : (
+          onMarkDone && (
+            <button
+              type="button"
+              title="Mark done as planned"
+              aria-label="Mark done as planned"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation()
+                onMarkDone()
+              }}
+              className="text-muted-foreground hover:text-green-600"
+            >
+              <Circle className="size-3.5" />
+            </button>
+          )
+        )}
       </div>
       {workout.title && <div className="mt-1 truncate font-medium">{workout.title}</div>}
       <div className="mt-1 text-muted-foreground">
@@ -74,6 +103,6 @@ export function WorkoutCard({ workout, completed, onClick }: WorkoutCardProps) {
       {workout.target_zone && (
         <div className="mt-0.5 text-muted-foreground">{ZONE_LABELS[workout.target_zone]}</div>
       )}
-    </button>
+    </div>
   )
 }

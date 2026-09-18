@@ -38,21 +38,21 @@ function sum<T extends Record<string, unknown>>(rows: T[], key: keyof T): number
   }, 0)
 }
 
-// A discipline's plan may be tracked by duration, by distance, or both (e.g.
-// a distance-only bike ride has plannedMinutes = 0). Falling back to km keeps
-// distance-only disciplines from being silently dropped out of the rate.
-export function completionRate(volumes: DisciplineVolume[]): number | null {
-  const rates = volumes
-    .map((v) => {
-      if (v.plannedMinutes > 0) return v.actualMinutes / v.plannedMinutes
-      if (v.plannedKm > 0) return v.actualKm / v.plannedKm
-      return null
-    })
-    .filter((rate): rate is number => rate !== null)
+export type SessionCompletion = { completed: number; total: number }
 
-  if (rates.length === 0) return null
-  const average = rates.reduce((sum, rate) => sum + rate, 0) / rates.length
-  return Math.round(average * 100)
+// Session-count completion sidesteps the unit problem entirely (a discipline
+// can be tracked by duration, distance, or both, sometimes session to
+// session) — a planned workout counts as done as soon as anything is
+// completed against it, regardless of which metric(s) were logged.
+export function sessionCompletion(
+  planned: PlannedWorkout[],
+  completed: CompletedWorkout[]
+): SessionCompletion {
+  const linkedIds = new Set(
+    completed.map((c) => c.planned_workout_id).filter((id): id is number => id !== null)
+  )
+  const completedCount = planned.filter((w) => linkedIds.has(w.id)).length
+  return { completed: completedCount, total: planned.length }
 }
 
 export function minutesToHours(minutes: number): number {

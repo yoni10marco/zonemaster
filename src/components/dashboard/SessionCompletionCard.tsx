@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import type { SessionCompletion } from "@/lib/utils/volume"
 
-export function CompletionRateCard({ rate }: { rate: number | null }) {
+export function SessionCompletionCard({ completed, total }: SessionCompletion) {
   return (
     <Card>
       <CardHeader>
@@ -9,14 +10,14 @@ export function CompletionRateCard({ rate }: { rate: number | null }) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {rate === null ? (
+        {total === 0 ? (
           <p className="text-2xl font-semibold text-muted-foreground">No plan yet</p>
         ) : (
-          <p className="text-3xl font-semibold">{rate}%</p>
+          <p className="text-3xl font-semibold">
+            {completed} / {total}
+          </p>
         )}
-        <p className="mt-1 text-xs text-muted-foreground">
-          of planned training time completed
-        </p>
+        <p className="mt-1 text-xs text-muted-foreground">workouts completed</p>
       </CardContent>
     </Card>
   )

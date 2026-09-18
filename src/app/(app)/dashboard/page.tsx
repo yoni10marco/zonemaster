@@ -4,13 +4,12 @@ import { useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { CompletionRateCard } from "@/components/dashboard/CompletionRateCard"
-import { DisciplineBreakdown } from "@/components/dashboard/DisciplineBreakdown"
-import { WeeklySummaryChart } from "@/components/dashboard/WeeklySummaryChart"
+import { DisciplineCards } from "@/components/dashboard/DisciplineCards"
+import { SessionCompletionCard } from "@/components/dashboard/SessionCompletionCard"
 import { usePlannedWorkouts } from "@/hooks/usePlannedWorkouts"
 import { useCompletedWorkouts } from "@/hooks/useCompletedWorkouts"
 import { format, nextAnchor, prevAnchor, weekRange } from "@/lib/utils/dates"
-import { aggregateVolume, completionRate } from "@/lib/utils/volume"
+import { aggregateVolume, sessionCompletion } from "@/lib/utils/volume"
 
 export default function DashboardPage() {
   const [anchor, setAnchor] = useState(new Date())
@@ -20,7 +19,7 @@ export default function DashboardPage() {
   const { completions, loading: loadingCompleted } = useCompletedWorkouts(range.start, range.end)
 
   const volumes = useMemo(() => aggregateVolume(workouts, completions), [workouts, completions])
-  const rate = useMemo(() => completionRate(volumes), [volumes])
+  const sessions = useMemo(() => sessionCompletion(workouts, completions), [workouts, completions])
 
   const loading = loadingPlanned || loadingCompleted
 
@@ -50,9 +49,8 @@ export default function DashboardPage() {
         </div>
       ) : (
         <>
-          <CompletionRateCard rate={rate} />
-          <WeeklySummaryChart volumes={volumes} />
-          <DisciplineBreakdown volumes={volumes} />
+          <SessionCompletionCard completed={sessions.completed} total={sessions.total} />
+          <DisciplineCards volumes={volumes} />
         </>
       )}
     </div>

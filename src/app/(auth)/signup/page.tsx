@@ -6,7 +6,7 @@ export default function SignupPage() {
   return (
     <>
       <div className="space-y-1 text-center">
-        <h1 className="text-xl font-semibold">Create your account</h1>
+        <h1 className="font-heading text-xl font-semibold">Create your account</h1>
         <p className="text-sm text-muted-foreground">
           Set up your training profile to get started.
         </p>

@@ -17,7 +17,7 @@ export default async function Home() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 bg-background px-6 text-center">
       <div className="space-y-3">
-        <h1 className="text-3xl font-semibold tracking-tight">Zone Master</h1>
+        <h1 className="font-heading text-4xl font-semibold tracking-tight">Zone Master</h1>
         <p className="max-w-sm text-muted-foreground">
           Plan, track, and analyze your endurance training &mdash; on your terms.
         </p>

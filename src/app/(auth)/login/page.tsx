@@ -6,7 +6,7 @@ export default function LoginPage() {
   return (
     <>
       <div className="space-y-1 text-center">
-        <h1 className="text-xl font-semibold">Welcome back</h1>
+        <h1 className="font-heading text-xl font-semibold">Welcome back</h1>
         <p className="text-sm text-muted-foreground">Log in to your Zone Master account.</p>
       </div>
       <LoginForm />

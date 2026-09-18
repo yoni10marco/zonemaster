@@ -158,7 +158,7 @@ export default function CalendarPage() {
           <Button variant="outline" size="sm" onClick={() => setAnchor(prevAnchor(anchor, view))}>
             Prev
           </Button>
-          <h1 className="min-w-40 text-center text-lg font-semibold">
+          <h1 className="font-heading min-w-40 text-center text-lg font-semibold">
             {view === "week"
               ? `${format(range.start, "MMM d")} – ${format(range.end, "MMM d, yyyy")}`
               : format(anchor, "MMMM yyyy")}

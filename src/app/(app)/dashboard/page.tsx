@@ -50,7 +50,7 @@ export default function DashboardPage() {
               <Button variant="outline" size="sm" onClick={() => setAnchor(prevAnchor(anchor, period))}>
                 Prev
               </Button>
-              <h1 className="min-w-48 text-center text-lg font-semibold">{periodLabel}</h1>
+              <h1 className="font-heading min-w-48 text-center text-lg font-semibold">{periodLabel}</h1>
               <Button variant="outline" size="sm" onClick={() => setAnchor(nextAnchor(anchor, period))}>
                 Next
               </Button>
@@ -59,7 +59,7 @@ export default function DashboardPage() {
               </Button>
             </>
           )}
-          {period === "all" && <h1 className="text-lg font-semibold">All time</h1>}
+          {period === "all" && <h1 className="font-heading text-lg font-semibold">All time</h1>}
         </div>
         <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
           <TabsList>

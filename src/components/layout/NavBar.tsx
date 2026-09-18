@@ -7,7 +7,7 @@ export function NavBar({ email }: { email: string }) {
     <header className="border-b bg-background">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
         <nav className="flex items-center gap-6">
-          <Link href="/calendar" className="font-semibold">
+          <Link href="/calendar" className="font-heading text-lg font-semibold">
             Zone Master
           </Link>
           <Link href="/calendar" className="text-sm text-muted-foreground hover:text-foreground">

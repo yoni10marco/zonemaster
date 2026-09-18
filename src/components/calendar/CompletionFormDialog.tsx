@@ -32,7 +32,7 @@ import {
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
 import type { PlannedWorkout } from "@/hooks/usePlannedWorkouts"
-import type { useCompletedWorkouts } from "@/hooks/useCompletedWorkouts"
+import type { CompletedWorkout, useCompletedWorkouts } from "@/hooks/useCompletedWorkouts"
 import { DISCIPLINES, DISCIPLINE_LABELS } from "@/lib/types/domain"
 import {
   completionSchema,
@@ -45,9 +45,12 @@ type CompletionFormDialogProps = {
   onOpenChange: (open: boolean) => void
   /** Pre-fill and link directly to this planned workout, if logging from a card. */
   plannedWorkout?: PlannedWorkout | null
+  /** If this workout already has a completion, edit it instead of creating a second one. */
+  existingCompletion?: CompletedWorkout | null
   /** Default date when logging standalone (not tied to a planned workout). */
   defaultDate: string
   logCompletion: ReturnType<typeof useCompletedWorkouts>["logCompletion"]
+  updateCompletion: ReturnType<typeof useCompletedWorkouts>["updateCompletion"]
   findLinkCandidate: ReturnType<typeof useCompletedWorkouts>["findLinkCandidate"]
 }
 
@@ -55,11 +58,14 @@ export function CompletionFormDialog({
   open,
   onOpenChange,
   plannedWorkout,
+  existingCompletion,
   defaultDate,
   logCompletion,
+  updateCompletion,
   findLinkCandidate,
 }: CompletionFormDialogProps) {
   const [submitting, setSubmitting] = useState(false)
+  const isEditing = !!existingCompletion
 
   const form = useForm<CompletionInput>({
     resolver: zodResolver(completionSchema),
@@ -75,6 +81,17 @@ export function CompletionFormDialog({
 
   useEffect(() => {
     if (!open) return
+    if (existingCompletion) {
+      form.reset({
+        executionDate: existingCompletion.execution_date,
+        discipline: existingCompletion.discipline,
+        actualDurationMinutes: existingCompletion.actual_duration_minutes?.toString() ?? "",
+        actualDistanceKm: existingCompletion.actual_distance_km?.toString() ?? "",
+        rpe: existingCompletion.rpe ?? 5,
+        notes: existingCompletion.notes ?? "",
+      })
+      return
+    }
     form.reset({
       executionDate: plannedWorkout?.target_date ?? defaultDate,
       discipline: plannedWorkout?.discipline ?? "run",
@@ -83,11 +100,36 @@ export function CompletionFormDialog({
       rpe: 5,
       notes: "",
     })
-  }, [open, plannedWorkout, defaultDate, form])
+  }, [open, plannedWorkout, existingCompletion, defaultDate, form])
 
   async function onSubmit(values: CompletionInput) {
     setSubmitting(true)
     try {
+      const enteredDuration = parseOptionalNumber(values.actualDurationMinutes)
+      const enteredDistance = parseOptionalNumber(values.actualDistanceKm)
+      // Leaving both blank means "I just want to mark this done" rather than
+      // "I did nothing" — default to the plan instead of storing an empty
+      // actual, so a quick log never reads as an incomplete workout.
+      const loggedNothing = enteredDuration === null && enteredDistance === null
+
+      if (existingCompletion) {
+        const fallbackDuration = plannedWorkout?.planned_duration_minutes ?? existingCompletion.actual_duration_minutes
+        const fallbackDistance = plannedWorkout?.planned_distance_km ?? existingCompletion.actual_distance_km
+
+        await updateCompletion(existingCompletion.id, {
+          execution_date: values.executionDate,
+          discipline: values.discipline as PlannedWorkout["discipline"],
+          actual_duration_minutes: loggedNothing ? fallbackDuration : enteredDuration,
+          actual_distance_km: loggedNothing ? fallbackDistance : enteredDistance,
+          rpe: values.rpe,
+          notes: values.notes || null,
+        })
+
+        toast.success("Completion updated")
+        onOpenChange(false)
+        return
+      }
+
       let plannedWorkoutId = plannedWorkout?.id ?? null
       let fallbackDuration = plannedWorkout?.planned_duration_minutes ?? null
       let fallbackDistance = plannedWorkout?.planned_distance_km ?? null
@@ -105,13 +147,6 @@ export function CompletionFormDialog({
           }
         }
       }
-
-      const enteredDuration = parseOptionalNumber(values.actualDurationMinutes)
-      const enteredDistance = parseOptionalNumber(values.actualDistanceKm)
-      // Leaving both blank means "I just want to mark this done" rather than
-      // "I did nothing" — default to the plan instead of storing an empty
-      // actual, so a quick log never reads as an incomplete workout.
-      const loggedNothing = enteredDuration === null && enteredDistance === null
 
       await logCompletion({
         planned_workout_id: plannedWorkoutId,
@@ -137,7 +172,7 @@ export function CompletionFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Log completed workout</DialogTitle>
+          <DialogTitle>{isEditing ? "Edit completion" : "Log completed workout"}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -265,7 +300,7 @@ export function CompletionFormDialog({
 
             <DialogFooter>
               <Button type="submit" disabled={submitting}>
-                {submitting ? "Saving..." : "Log completion"}
+                {submitting ? "Saving..." : isEditing ? "Save changes" : "Log completion"}
               </Button>
             </DialogFooter>
           </form>

@@ -32,6 +32,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import type { PlannedWorkout } from "@/hooks/usePlannedWorkouts"
 import { usePlannedWorkouts } from "@/hooks/usePlannedWorkouts"
+import type { CompletedWorkout } from "@/hooks/useCompletedWorkouts"
 import { DISCIPLINES, DISCIPLINE_LABELS, INTENSITY_ZONES, ZONE_LABELS } from "@/lib/types/domain"
 import {
   parseOptionalNumber,
@@ -44,11 +45,14 @@ type WorkoutFormDialogProps = {
   onOpenChange: (open: boolean) => void
   targetDate: string
   workout?: PlannedWorkout | null
+  /** The existing completion for this workout, if any — determines whether
+   *  "Log completion" starts a new one or edits the one that's already there. */
+  existingCompletion?: CompletedWorkout | null
   mutations: Pick<
     ReturnType<typeof usePlannedWorkouts>,
     "createWorkout" | "updateWorkout" | "deleteWorkout"
   >
-  onLogCompletion?: (workout: PlannedWorkout) => void
+  onLogCompletion?: (workout: PlannedWorkout, existingCompletion: CompletedWorkout | null) => void
 }
 
 export function WorkoutFormDialog({
@@ -56,6 +60,7 @@ export function WorkoutFormDialog({
   onOpenChange,
   targetDate,
   workout,
+  existingCompletion,
   mutations,
   onLogCompletion,
 }: WorkoutFormDialogProps) {
@@ -281,10 +286,10 @@ export function WorkoutFormDialog({
                       // stops matching) — an explicit onOpenChange(false)
                       // here would fire a second, overwriting state update
                       // in the same handler and could clobber the new state.
-                      onLogCompletion(workout)
+                      onLogCompletion(workout, existingCompletion ?? null)
                     }}
                   >
-                    Log completion
+                    {existingCompletion ? "Edit completion" : "Log completion"}
                   </Button>
                 )}
               </div>

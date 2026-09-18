@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useState } from "react"
 
 import { createClient } from "@/lib/supabase/client"
-import type { Tables, TablesInsert } from "@/lib/types/database.types"
+import type { Tables, TablesInsert, TablesUpdate } from "@/lib/types/database.types"
 import type { Discipline } from "@/lib/types/domain"
 import { toISODate } from "@/lib/utils/dates"
 
 export type CompletedWorkout = Tables<"completed_workouts">
 export type CompletedWorkoutInsert = TablesInsert<"completed_workouts">
+export type CompletedWorkoutUpdate = TablesUpdate<"completed_workouts">
 
 // null start/end means unbounded ("all time") — RLS still scopes results to
 // the current user, so this never leaks other users' data.
@@ -62,6 +63,23 @@ export function useCompletedWorkouts(rangeStart: Date | null, rangeEnd: Date | n
     return data
   }
 
+  // A planned workout has at most one completion (enforced by a unique
+  // partial index) — editing an already-completed workout updates that row
+  // instead of inserting a second one.
+  async function updateCompletion(id: number, input: CompletedWorkoutUpdate) {
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from("completed_workouts")
+      .update(input)
+      .eq("id", id)
+      .select()
+      .single()
+
+    if (error) throw new Error(error.message)
+    setCompletions((prev) => prev.map((c) => (c.id === id ? data : c)))
+    return data
+  }
+
   // Find an existing planned workout for the same date+discipline with no
   // linked completion yet, so a standalone log can prompt to link to it.
   // Returns the planned duration/distance too, so a completion left blank
@@ -92,5 +110,5 @@ export function useCompletedWorkouts(rangeStart: Date | null, rangeEnd: Date | n
     return candidates.length === 1 ? candidates[0] : null
   }
 
-  return { completions, loading, error, refetch, logCompletion, findLinkCandidate }
+  return { completions, loading, error, refetch, logCompletion, updateCompletion, findLinkCandidate }
 }

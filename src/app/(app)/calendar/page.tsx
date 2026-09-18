@@ -21,7 +21,7 @@ import { WorkoutCard } from "@/components/calendar/WorkoutCard"
 import { WorkoutFormDialog } from "@/components/calendar/WorkoutFormDialog"
 import { CompletionFormDialog } from "@/components/calendar/CompletionFormDialog"
 import { usePlannedWorkouts, type PlannedWorkout } from "@/hooks/usePlannedWorkouts"
-import { useCompletedWorkouts } from "@/hooks/useCompletedWorkouts"
+import { useCompletedWorkouts, type CompletedWorkout } from "@/hooks/useCompletedWorkouts"
 import {
   format,
   monthRange,
@@ -57,7 +57,7 @@ export default function CalendarPage() {
     rescheduleWorkout,
   } = usePlannedWorkouts(range.start, range.end)
 
-  const { completions, logCompletion, findLinkCandidate } = useCompletedWorkouts(
+  const { completions, logCompletion, updateCompletion, findLinkCandidate } = useCompletedWorkouts(
     range.start,
     range.end
   )
@@ -72,14 +72,29 @@ export default function CalendarPage() {
     return map
   }, [workouts])
 
+  // A planned workout has at most one completion (enforced in the DB) — this
+  // map is how "already completed, edit instead of re-logging" is detected.
+  const completionByPlannedId = useMemo(() => {
+    const map = new Map<number, CompletedWorkout>()
+    for (const c of completions) {
+      if (c.planned_workout_id !== null) map.set(c.planned_workout_id, c)
+    }
+    return map
+  }, [completions])
+
   const completedWorkoutIds = useMemo(
-    () => new Set(completions.map((c) => c.planned_workout_id).filter((id): id is number => id !== null)),
-    [completions]
+    () => new Set(completionByPlannedId.keys()),
+    [completionByPlannedId]
   )
 
   const [dialogState, setDialogState] = useState<
     | { type: "workout"; date: string; workout: PlannedWorkout | null }
-    | { type: "completion"; date: string; workout: PlannedWorkout | null }
+    | {
+        type: "completion"
+        date: string
+        workout: PlannedWorkout | null
+        existingCompletion: CompletedWorkout | null
+      }
     | null
   >(null)
 
@@ -92,6 +107,7 @@ export default function CalendarPage() {
   }
 
   async function handleMarkDone(workout: PlannedWorkout) {
+    if (completionByPlannedId.has(workout.id)) return // already completed
     try {
       await logCompletion({
         planned_workout_id: workout.id,
@@ -158,7 +174,14 @@ export default function CalendarPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setDialogState({ type: "completion", date: toISODate(new Date()), workout: null })}
+            onClick={() =>
+              setDialogState({
+                type: "completion",
+                date: toISODate(new Date()),
+                workout: null,
+                existingCompletion: null,
+              })
+            }
           >
             Log a workout
           </Button>
@@ -217,9 +240,12 @@ export default function CalendarPage() {
           onOpenChange={(open) => !open && setDialogState(null)}
           targetDate={dialogState.date}
           workout={dialogState.workout}
+          existingCompletion={
+            dialogState.workout ? (completionByPlannedId.get(dialogState.workout.id) ?? null) : null
+          }
           mutations={{ createWorkout, updateWorkout, deleteWorkout }}
-          onLogCompletion={(workout) =>
-            setDialogState({ type: "completion", date: workout.target_date, workout })
+          onLogCompletion={(workout, existingCompletion) =>
+            setDialogState({ type: "completion", date: workout.target_date, workout, existingCompletion })
           }
         />
       )}
@@ -229,8 +255,10 @@ export default function CalendarPage() {
           open
           onOpenChange={(open) => !open && setDialogState(null)}
           plannedWorkout={dialogState.workout}
+          existingCompletion={dialogState.existingCompletion}
           defaultDate={dialogState.date}
           logCompletion={logCompletion}
+          updateCompletion={updateCompletion}
           findLinkCandidate={findLinkCandidate}
         />
       )}

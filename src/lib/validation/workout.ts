@@ -23,15 +23,6 @@ export const plannedWorkoutSchema = z
 
 export type PlannedWorkoutInput = z.infer<typeof plannedWorkoutSchema>
 
-// Intentionally just "what" and "when" — no duration/distance/RPE/notes.
-// Logging a completion is meant to be a single tap, not a data-entry form.
-export const completionSchema = z.object({
-  executionDate: z.string().min(1, "Date is required"),
-  discipline: z.enum(DISCIPLINES),
-})
-
-export type CompletionInput = z.infer<typeof completionSchema>
-
 export function parseOptionalNumber(value: string | undefined): number | null {
   if (!hasValue(value)) return null
   const num = Number(value)

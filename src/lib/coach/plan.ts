@@ -57,6 +57,20 @@ const rawPlanSchema = z.object({
   drafts: z.array(z.unknown()),
 })
 
+// Distance isn't a meaningful target for strength/other sessions. Swims are
+// tracked in meters, so they keep 3 decimals of a km (750 m stays 750 m) and a
+// value that is clearly meters (e.g. 1500) is converted instead of being
+// mistaken for 1,500 km.
+function normalizeDistanceKm(raw: number | null | undefined, discipline: Discipline): number | null {
+  if (raw == null || !(raw > 0)) return null
+  if (discipline === "strength" || discipline === "other") return null
+  if (discipline === "swim") {
+    const km = raw >= 50 ? raw / 1000 : raw
+    return km <= 20 ? Math.round(km * 1000) / 1000 : null
+  }
+  return raw <= 400 ? Math.round(raw * 10) / 10 : null
+}
+
 export type ParsedPlan = { summary: string; drafts: WorkoutDraft[] }
 
 /**
@@ -90,15 +104,7 @@ export function parsePlan(rawText: string, weekStart: string): ParsedPlan {
       d.durationMinutes != null && d.durationMinutes >= 5 && d.durationMinutes <= 480
         ? Math.round(d.durationMinutes)
         : null
-    // Distance isn't a meaningful target for strength/other sessions.
-    const distanceKm =
-      d.distanceKm != null &&
-      d.distanceKm > 0 &&
-      d.distanceKm <= 400 &&
-      d.discipline !== "strength" &&
-      d.discipline !== "other"
-        ? Math.round(d.distanceKm * 10) / 10
-        : null
+    const distanceKm = normalizeDistanceKm(d.distanceKm, d.discipline)
 
     // The database requires a duration or a distance on every planned workout.
     if (durationMinutes === null && distanceKm === null) continue

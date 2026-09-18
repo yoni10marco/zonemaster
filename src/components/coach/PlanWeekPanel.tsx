@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/client"
 import { DISCIPLINE_LABELS, ZONE_LABELS } from "@/lib/types/domain"
 import { cn } from "@/lib/utils"
 import { toISODate, weekRange } from "@/lib/utils/dates"
+import { formatDistance } from "@/lib/utils/distance"
 import { DISCIPLINE_ICONS, DISCIPLINE_STYLES } from "@/lib/utils/discipline-style"
 
 type WeekChoice = "this" | "next"
@@ -165,7 +166,7 @@ export function PlanWeekPanel() {
             const Icon = DISCIPLINE_ICONS[d.discipline]
             const details = [
               d.durationMinutes ? `${d.durationMinutes} min` : null,
-              d.distanceKm ? `${d.distanceKm} km` : null,
+              d.distanceKm ? formatDistance(d.distanceKm, d.discipline) : null,
               d.zone ? ZONE_LABELS[d.zone] : null,
             ].filter(Boolean)
 

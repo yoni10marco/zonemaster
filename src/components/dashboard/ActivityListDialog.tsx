@@ -17,6 +17,7 @@ import type { Tables } from "@/lib/types/database.types"
 import type { Discipline } from "@/lib/types/domain"
 import { DISCIPLINE_LABELS } from "@/lib/types/domain"
 import { format } from "@/lib/utils/dates"
+import { formatDistance } from "@/lib/utils/distance"
 import { DISCIPLINE_ICONS } from "@/lib/utils/discipline-style"
 
 type CompletedWorkout = Tables<"completed_workouts">
@@ -98,7 +99,9 @@ export function ActivityListDialog({ discipline, onOpenChange }: ActivityListDia
                 <span className="flex-1 text-right text-muted-foreground">
                   {activity.actual_duration_minutes ? `${activity.actual_duration_minutes} min` : null}
                   {activity.actual_duration_minutes && activity.actual_distance_km ? " · " : null}
-                  {activity.actual_distance_km ? `${activity.actual_distance_km} km` : null}
+                  {activity.actual_distance_km
+                    ? formatDistance(activity.actual_distance_km, activity.discipline)
+                    : null}
                   {activity.rpe ? ` · RPE ${activity.rpe}` : null}
                 </span>
                 <Button

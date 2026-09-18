@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react"
 
 import { createClient } from "@/lib/supabase/client"
 import type { Tables, TablesInsert, TablesUpdate } from "@/lib/types/database.types"
-import type { Discipline } from "@/lib/types/domain"
 import { toISODate } from "@/lib/utils/dates"
 
 export type CompletedWorkout = Tables<"completed_workouts">
@@ -63,58 +62,11 @@ export function useCompletedWorkouts(rangeStart: Date | null, rangeEnd: Date | n
     return data
   }
 
-  // A planned workout has at most one completion (enforced by a unique
-  // partial index) — editing an already-completed workout updates that row
-  // instead of inserting a second one.
-  async function updateCompletion(id: number, input: CompletedWorkoutUpdate) {
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from("completed_workouts")
-      .update(input)
-      .eq("id", id)
-      .select()
-      .single()
-
-    if (error) throw new Error(error.message)
-    setCompletions((prev) => prev.map((c) => (c.id === id ? data : c)))
-    return data
-  }
-
   async function deleteCompletion(id: number) {
     const supabase = createClient()
     const { error } = await supabase.from("completed_workouts").delete().eq("id", id)
     if (error) throw new Error(error.message)
     setCompletions((prev) => prev.filter((c) => c.id !== id))
-  }
-
-  // Find an existing planned workout for the same date+discipline with no
-  // linked completion yet, so a standalone log can prompt to link to it.
-  // Returns the planned duration/distance too, so a completion left blank
-  // can default to "completed as planned" rather than an empty actual.
-  async function findLinkCandidate(executionDate: string, discipline: Discipline) {
-    const supabase = createClient()
-    const { data: planned, error: plannedError } = await supabase
-      .from("planned_workouts")
-      .select("id, planned_duration_minutes, planned_distance_km")
-      .eq("target_date", executionDate)
-      .eq("discipline", discipline)
-
-    if (plannedError || !planned || planned.length === 0) return null
-
-    const { data: linked, error: linkedError } = await supabase
-      .from("completed_workouts")
-      .select("planned_workout_id")
-      .in(
-        "planned_workout_id",
-        planned.map((p) => p.id)
-      )
-
-    if (linkedError) return null
-
-    const linkedIds = new Set(linked.map((l) => l.planned_workout_id))
-    const candidates = planned.filter((p) => !linkedIds.has(p.id))
-
-    return candidates.length === 1 ? candidates[0] : null
   }
 
   return {
@@ -123,8 +75,6 @@ export function useCompletedWorkouts(rangeStart: Date | null, rangeEnd: Date | n
     error,
     refetch,
     logCompletion,
-    updateCompletion,
     deleteCompletion,
-    findLinkCandidate,
   }
 }

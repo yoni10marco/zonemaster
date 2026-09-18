@@ -8,6 +8,7 @@ import type { PlannedWorkout } from "@/hooks/usePlannedWorkouts"
 import { DISCIPLINE_LABELS, ZONE_LABELS } from "@/lib/types/domain"
 import { DISCIPLINE_ICONS, DISCIPLINE_STYLES } from "@/lib/utils/discipline-style"
 import { cn } from "@/lib/utils"
+import { formatDistance } from "@/lib/utils/distance"
 
 type WorkoutCardProps = {
   workout: PlannedWorkout
@@ -164,7 +165,7 @@ export function WorkoutCard({
           <div className="mt-1 text-muted-foreground">
             {workout.planned_duration_minutes ? `${workout.planned_duration_minutes} min` : null}
             {workout.planned_duration_minutes && workout.planned_distance_km ? " · " : null}
-            {workout.planned_distance_km ? `${workout.planned_distance_km} km` : null}
+            {workout.planned_distance_km ? formatDistance(workout.planned_distance_km, workout.discipline) : null}
           </div>
           {workout.target_zone && (
             <div className="mt-0.5 text-muted-foreground">{ZONE_LABELS[workout.target_zone]}</div>

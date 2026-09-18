@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Database, Tables } from "@/lib/types/database.types"
 import { DISCIPLINES, DISCIPLINE_LABELS } from "@/lib/types/domain"
 import { toISODate } from "@/lib/utils/dates"
+import { formatDistance } from "@/lib/utils/distance"
 
 type Completed = Tables<"completed_workouts">
 type Planned = Tables<"planned_workouts">
@@ -24,7 +25,7 @@ function clean(text: string | null, max = 60): string {
 function describeCompleted(c: Completed): string {
   const parts = [c.execution_date, DISCIPLINE_LABELS[c.discipline]]
   if (c.actual_duration_minutes) parts.push(`${c.actual_duration_minutes} min`)
-  if (c.actual_distance_km) parts.push(`${c.actual_distance_km} km`)
+  if (c.actual_distance_km) parts.push(formatDistance(c.actual_distance_km, c.discipline))
   if (c.avg_heart_rate) parts.push(`avg HR ${c.avg_heart_rate}`)
   if (c.avg_pace_or_power) parts.push(c.avg_pace_or_power)
   if (c.rpe) parts.push(`RPE ${c.rpe}`)
@@ -34,7 +35,7 @@ function describeCompleted(c: Completed): string {
 function describePlanned(p: Planned): string {
   const parts = [p.target_date, DISCIPLINE_LABELS[p.discipline]]
   if (p.planned_duration_minutes) parts.push(`${p.planned_duration_minutes} min`)
-  if (p.planned_distance_km) parts.push(`${p.planned_distance_km} km`)
+  if (p.planned_distance_km) parts.push(formatDistance(p.planned_distance_km, p.discipline))
   if (p.target_zone) parts.push(p.target_zone.toUpperCase())
   const title = clean(p.title)
   return `- ${parts.join(", ")}${title ? ` ("${title}")` : ""}`
@@ -46,7 +47,7 @@ function disciplineTotals(completed: Completed[]): string {
     if (rows.length === 0) return null
     const minutes = rows.reduce((sum, c) => sum + (c.actual_duration_minutes ?? 0), 0)
     const km = rows.reduce((sum, c) => sum + (c.actual_distance_km ?? 0), 0)
-    return `- ${DISCIPLINE_LABELS[d]}: ${rows.length} sessions, ${minutes} min, ${Math.round(km * 10) / 10} km`
+    return `- ${DISCIPLINE_LABELS[d]}: ${rows.length} sessions, ${minutes} min, ${formatDistance(km, d)}`
   }).filter((line): line is string => line !== null)
   return lines.length > 0 ? lines.join("\n") : "- none logged"
 }

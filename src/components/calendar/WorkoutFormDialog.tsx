@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 
@@ -32,8 +32,19 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import type { PlannedWorkout } from "@/hooks/usePlannedWorkouts"
 import { usePlannedWorkouts } from "@/hooks/usePlannedWorkouts"
-import type { CompletedWorkout } from "@/hooks/useCompletedWorkouts"
-import { DISCIPLINES, DISCIPLINE_LABELS, INTENSITY_ZONES, ZONE_LABELS } from "@/lib/types/domain"
+import {
+  DISCIPLINES,
+  DISCIPLINE_LABELS,
+  INTENSITY_ZONES,
+  ZONE_LABELS,
+  type Discipline,
+} from "@/lib/types/domain"
+import {
+  displayValueToKm,
+  distanceUnit,
+  kmToDisplayValue,
+  usesMeters,
+} from "@/lib/utils/distance"
 import {
   parseOptionalNumber,
   plannedWorkoutSchema,
@@ -45,14 +56,10 @@ type WorkoutFormDialogProps = {
   onOpenChange: (open: boolean) => void
   targetDate: string
   workout?: PlannedWorkout | null
-  /** The existing completion for this workout, if any — determines whether
-   *  "Log completion" starts a new one or edits the one that's already there. */
-  existingCompletion?: CompletedWorkout | null
   mutations: Pick<
     ReturnType<typeof usePlannedWorkouts>,
     "createWorkout" | "updateWorkout" | "deleteWorkout"
   >
-  onLogCompletion?: (workout: PlannedWorkout, existingCompletion: CompletedWorkout | null) => void
 }
 
 export function WorkoutFormDialog({
@@ -60,9 +67,7 @@ export function WorkoutFormDialog({
   onOpenChange,
   targetDate,
   workout,
-  existingCompletion,
   mutations,
-  onLogCompletion,
 }: WorkoutFormDialogProps) {
   const isEditing = !!workout
 
@@ -79,13 +84,19 @@ export function WorkoutFormDialog({
     },
   })
 
+  // The distance field holds what is shown: meters for swims, km otherwise.
+  const discipline = useWatch({ control: form.control, name: "discipline" }) as Discipline
+
   useEffect(() => {
     if (!open) return
     form.reset({
       targetDate: workout?.target_date ?? targetDate,
       discipline: workout?.discipline ?? "run",
       plannedDurationMinutes: workout?.planned_duration_minutes?.toString() ?? "",
-      plannedDistanceKm: workout?.planned_distance_km?.toString() ?? "",
+      plannedDistanceKm:
+        workout?.planned_distance_km != null
+          ? kmToDisplayValue(workout.planned_distance_km, workout.discipline).toString()
+          : "",
       targetZone: workout?.target_zone ?? undefined,
       title: workout?.title ?? "",
       notes: workout?.notes ?? "",
@@ -98,7 +109,10 @@ export function WorkoutFormDialog({
         target_date: values.targetDate,
         discipline: values.discipline as PlannedWorkout["discipline"],
         planned_duration_minutes: parseOptionalNumber(values.plannedDurationMinutes),
-        planned_distance_km: parseOptionalNumber(values.plannedDistanceKm),
+        planned_distance_km: (() => {
+          const typed = parseOptionalNumber(values.plannedDistanceKm)
+          return typed === null ? null : displayValueToKm(typed, values.discipline)
+        })(),
         target_zone: (values.targetZone || null) as PlannedWorkout["target_zone"],
         title: values.title || null,
         notes: values.notes || null,
@@ -156,7 +170,20 @@ export function WorkoutFormDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Discipline</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select
+                    onValueChange={(next) => {
+                      const previous = form.getValues("discipline") as Discipline
+                      field.onChange(next)
+                      // Switching to/from swim changes the unit, so convert a value
+                      // that is already typed instead of silently reinterpreting it.
+                      const typed = parseOptionalNumber(form.getValues("plannedDistanceKm"))
+                      if (typed !== null && usesMeters(previous) !== usesMeters(next as Discipline)) {
+                        const km = displayValueToKm(typed, previous)
+                        form.setValue("plannedDistanceKm", kmToDisplayValue(km, next as Discipline).toString())
+                      }
+                    }}
+                    value={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger className="w-full">
                         <SelectValue />
@@ -200,12 +227,12 @@ export function WorkoutFormDialog({
                 name="plannedDistanceKm"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Distance (km)</FormLabel>
+                    <FormLabel>Distance ({distanceUnit(discipline)})</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
                         min={0}
-                        step="0.1"
+                        step={usesMeters(discipline) ? "1" : "0.1"}
                         value={field.value ?? ""}
                         onChange={(e) => field.onChange(e.target.value)}
                       />
@@ -274,22 +301,6 @@ export function WorkoutFormDialog({
                 {isEditing && (
                   <Button type="button" variant="destructive" onClick={handleDelete}>
                     Delete
-                  </Button>
-                )}
-                {isEditing && workout && onLogCompletion && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      // Switching dialogState to "completion" in the parent
-                      // already unmounts this dialog (its render condition
-                      // stops matching) — an explicit onOpenChange(false)
-                      // here would fire a second, overwriting state update
-                      // in the same handler and could clobber the new state.
-                      onLogCompletion(workout, existingCompletion ?? null)
-                    }}
-                  >
-                    {existingCompletion ? "Edit completion" : "Log completion"}
                   </Button>
                 )}
               </div>

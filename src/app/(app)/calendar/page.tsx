@@ -11,7 +11,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core"
-import { CalendarPlus, CalendarX2 } from "lucide-react"
+import { CalendarX2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -21,7 +21,6 @@ import { WeekView } from "@/components/calendar/WeekView"
 import { MonthView } from "@/components/calendar/MonthView"
 import { TOUCH_DRAG_DELAY_MS, WorkoutCard } from "@/components/calendar/WorkoutCard"
 import { WorkoutFormDialog } from "@/components/calendar/WorkoutFormDialog"
-import { CompletionFormDialog } from "@/components/calendar/CompletionFormDialog"
 import { usePlannedWorkouts, type PlannedWorkout } from "@/hooks/usePlannedWorkouts"
 import { useCompletedWorkouts, type CompletedWorkout } from "@/hooks/useCompletedWorkouts"
 import {
@@ -29,7 +28,6 @@ import {
   monthRange,
   nextAnchor,
   prevAnchor,
-  toISODate,
   weekRange,
 } from "@/lib/utils/dates"
 
@@ -66,8 +64,7 @@ export default function CalendarPage() {
     rescheduleWorkout,
   } = usePlannedWorkouts(range.start, range.end)
 
-  const { completions, logCompletion, updateCompletion, deleteCompletion, findLinkCandidate } =
-    useCompletedWorkouts(range.start, range.end)
+  const { completions, logCompletion, deleteCompletion } = useCompletedWorkouts(range.start, range.end)
 
   const workoutsByDate = useMemo(() => {
     const map = new Map<string, PlannedWorkout[]>()
@@ -94,23 +91,14 @@ export default function CalendarPage() {
     [completionByPlannedId]
   )
 
-  const [dialogState, setDialogState] = useState<
-    | { type: "workout"; date: string; workout: PlannedWorkout | null }
-    | {
-        type: "completion"
-        date: string
-        workout: PlannedWorkout | null
-        existingCompletion: CompletedWorkout | null
-      }
-    | null
-  >(null)
+  const [dialogState, setDialogState] = useState<{ date: string; workout: PlannedWorkout | null } | null>(null)
 
   function handleAdd(dateISO: string) {
-    setDialogState({ type: "workout", date: dateISO, workout: null })
+    setDialogState({ date: dateISO, workout: null })
   }
 
   function handleWorkoutClick(workout: PlannedWorkout) {
-    setDialogState({ type: "workout", date: workout.target_date, workout })
+    setDialogState({ date: workout.target_date, workout })
   }
 
   async function handleMarkDone(workout: PlannedWorkout) {
@@ -189,21 +177,6 @@ export default function CalendarPage() {
           </Button>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              setDialogState({
-                type: "completion",
-                date: toISODate(new Date()),
-                workout: null,
-                existingCompletion: null,
-              })
-            }
-          >
-            <CalendarPlus className="size-4" />
-            Log a workout
-          </Button>
           <Tabs value={view} onValueChange={(v) => setView(v as CalendarView)}>
             <TabsList>
               <TabsTrigger value="week">Week</TabsTrigger>
@@ -261,33 +234,13 @@ export default function CalendarPage() {
         </div>
       )}
 
-      {dialogState?.type === "workout" && (
+      {dialogState && (
         <WorkoutFormDialog
           open
           onOpenChange={(open) => !open && setDialogState(null)}
           targetDate={dialogState.date}
           workout={dialogState.workout}
-          existingCompletion={
-            dialogState.workout ? (completionByPlannedId.get(dialogState.workout.id) ?? null) : null
-          }
           mutations={{ createWorkout, updateWorkout, deleteWorkout }}
-          onLogCompletion={(workout, existingCompletion) =>
-            setDialogState({ type: "completion", date: workout.target_date, workout, existingCompletion })
-          }
-        />
-      )}
-
-      {dialogState?.type === "completion" && (
-        <CompletionFormDialog
-          open
-          onOpenChange={(open) => !open && setDialogState(null)}
-          plannedWorkout={dialogState.workout}
-          existingCompletion={dialogState.existingCompletion}
-          defaultDate={dialogState.date}
-          logCompletion={logCompletion}
-          updateCompletion={updateCompletion}
-          deleteCompletion={deleteCompletion}
-          findLinkCandidate={findLinkCandidate}
         />
       )}
     </div>

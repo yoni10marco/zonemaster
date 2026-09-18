@@ -1,5 +1,5 @@
 const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models"
-const DEFAULT_MODEL = "gemini-2.5-flash"
+const DEFAULT_MODEL = "gemini-3.5-flash"
 
 export class CoachNotConfiguredError extends Error {
   constructor() {

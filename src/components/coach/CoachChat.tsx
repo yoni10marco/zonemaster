@@ -62,7 +62,7 @@ export function CoachChat({ initialMessages }: { initialMessages: ChatMessage[] 
     <div className="flex flex-col gap-3">
       <div
         ref={scrollRef}
-        className="h-[55vh] min-h-72 space-y-3 overflow-y-auto rounded-xl border bg-card p-3 sm:p-4"
+        className="h-[55vh] min-h-72 space-y-3 overflow-x-hidden overflow-y-auto rounded-xl border bg-card p-3 sm:p-4"
       >
         {messages.length === 0 && !sending ? (
           <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
@@ -77,7 +77,13 @@ export function CoachChat({ initialMessages }: { initialMessages: ChatMessage[] 
             </div>
             <div className="flex flex-wrap justify-center gap-2">
               {SUGGESTIONS.map((s) => (
-                <Button key={s} variant="outline" size="sm" onClick={() => send(s)}>
+                <Button
+                  key={s}
+                  variant="outline"
+                  size="sm"
+                  className="h-auto max-w-full py-1.5 text-center whitespace-normal"
+                  onClick={() => send(s)}
+                >
                   {s}
                 </Button>
               ))}
@@ -114,8 +120,10 @@ export function CoachChat({ initialMessages }: { initialMessages: ChatMessage[] 
           e.preventDefault()
           send(input)
         }}
-        className="flex items-end gap-2"
+        className="relative"
       >
+        {/* The send button sits inside the box (not beside it) so the input
+            spans the full width, lined up with the chat panel above. */}
         <Textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -128,10 +136,16 @@ export function CoachChat({ initialMessages }: { initialMessages: ChatMessage[] 
           placeholder="Ask about your training..."
           maxLength={2000}
           rows={2}
-          className="min-h-0 flex-1 resize-none"
+          className="min-h-14 resize-none rounded-xl bg-card py-3 pr-14 pl-3.5"
           disabled={sending}
         />
-        <Button type="submit" size="icon-lg" disabled={sending || input.trim() === ""} aria-label="Send">
+        <Button
+          type="submit"
+          size="icon-lg"
+          className="absolute right-2 bottom-2 rounded-full"
+          disabled={sending || input.trim() === ""}
+          aria-label="Send"
+        >
           <SendHorizonal />
         </Button>
       </form>

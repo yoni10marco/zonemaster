@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 export function CoachView({ initialMessages }: { initialMessages: ChatMessage[] }) {
   return (
     <Tabs defaultValue="chat" className="gap-4">
-      <TabsList>
+      <TabsList className="w-full group-data-horizontal/tabs:h-10">
         <TabsTrigger value="chat">
           <MessageSquare className="size-3.5" />
           Chat

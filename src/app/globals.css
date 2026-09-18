@@ -100,5 +100,8 @@
   }
   html {
     @apply font-sans;
+    /* Phones: no sideways panning, ever. `clip` (unlike `hidden`) does not
+       turn the element into a scroll container, so sticky/fixed still work. */
+    overflow-x: clip;
   }
 }

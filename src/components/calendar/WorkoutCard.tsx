@@ -23,11 +23,22 @@ type WorkoutCardProps = {
   compact?: boolean
 }
 
-// dnd-kit's PointerSensor calls preventDefault() on pointerdown, which stops
-// the browser from ever synthesizing the follow-up "click" event — so a
-// plain onClick on a draggable node never fires. Detect a real click
-// ourselves by comparing pointerdown/pointerup positions instead.
+// A plain onClick is unreliable on a draggable node, so a "click" is detected
+// here by comparing pointerdown/pointerup positions instead.
 const CLICK_MOVEMENT_THRESHOLD_PX = 5
+
+// On touch a card is dragged by pressing and holding this long. A press that
+// lasted at least this long was a (possibly abandoned) drag, not a tap, so it
+// must not also open the card.
+export const TOUCH_DRAG_DELAY_MS = 250
+
+// Spread onto the nested checkmark buttons so pressing them never starts a
+// card drag (mouse and touch drags start from different events).
+const stopDragStart = {
+  onPointerDown: (e: React.SyntheticEvent) => e.stopPropagation(),
+  onMouseDown: (e: React.SyntheticEvent) => e.stopPropagation(),
+  onTouchStart: (e: React.SyntheticEvent) => e.stopPropagation(),
+}
 
 export function WorkoutCard({
   workout,
@@ -42,7 +53,7 @@ export function WorkoutCard({
     data: { workoutId: workout.id },
   })
 
-  const pointerDownPos = useRef<{ x: number; y: number } | null>(null)
+  const pointerDownPos = useRef<{ x: number; y: number; time: number } | null>(null)
 
   const style = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
@@ -62,8 +73,7 @@ export function WorkoutCard({
       {...listeners}
       {...attributes}
       onPointerDown={(e) => {
-        pointerDownPos.current = { x: e.clientX, y: e.clientY }
-        listeners?.onPointerDown?.(e)
+        pointerDownPos.current = { x: e.clientX, y: e.clientY, time: e.timeStamp }
       }}
       onPointerUp={(e) => {
         const start = pointerDownPos.current
@@ -71,7 +81,12 @@ export function WorkoutCard({
         if (!start || !onClick) return
         const dx = Math.abs(e.clientX - start.x)
         const dy = Math.abs(e.clientY - start.y)
-        if (dx < CLICK_MOVEMENT_THRESHOLD_PX && dy < CLICK_MOVEMENT_THRESHOLD_PX) {
+        const wasHold = e.pointerType === "touch" && e.timeStamp - start.time >= TOUCH_DRAG_DELAY_MS
+        if (!wasHold && dx < CLICK_MOVEMENT_THRESHOLD_PX && dy < CLICK_MOVEMENT_THRESHOLD_PX) {
+          // Same ghost-click guard as DayColumn: on touch, the browser sends a
+          // compatibility click after pointerup, which would otherwise land on
+          // whatever the dialog we're about to open puts under the finger.
+          if (e.pointerType === "touch") e.preventDefault()
           onClick()
         }
       }}
@@ -82,7 +97,9 @@ export function WorkoutCard({
         }
       }}
       className={cn(
-        "w-full min-w-0 cursor-pointer rounded-lg border text-left text-xs shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md",
+        // select-none + no touch callout: a long-press to drag must not start
+        // text selection or the iOS/Android link/image menu.
+        "w-full min-w-0 cursor-pointer rounded-lg border text-left text-xs shadow-sm transition-all select-none [-webkit-touch-callout:none] hover:-translate-y-0.5 hover:shadow-md",
         style_.card,
         compact ? "p-1" : "p-2.5",
         isDragging && "opacity-50"
@@ -94,7 +111,7 @@ export function WorkoutCard({
           <span className="truncate text-[10px] font-medium">
             {workout.title || DISCIPLINE_LABELS[workout.discipline]}
           </span>
-          {completed && <CheckCircle2 className="ml-auto size-3 shrink-0 text-green-600" />}
+          {completed && <CheckCircle2 className="ml-auto size-3.5 shrink-0 rounded-full bg-white text-green-600" />}
         </div>
       ) : (
         <>
@@ -113,14 +130,14 @@ export function WorkoutCard({
                   type="button"
                   title="Completed — tap to remove"
                   aria-label="Completed — tap to remove this logged activity"
-                  onPointerDown={(e) => e.stopPropagation()}
+                  {...stopDragStart}
                   onClick={(e) => {
                     e.stopPropagation()
                     onUnmarkDone()
                   }}
-                  className="flex size-6 shrink-0 items-center justify-center rounded-full bg-green-500 text-white shadow-sm transition-transform hover:scale-110 hover:bg-green-600"
+                  className="flex size-11 shrink-0 items-center justify-center rounded-full bg-green-500 text-white shadow-sm transition-transform hover:scale-110 hover:bg-green-600 sm:size-6"
                 >
-                  <Check className="size-4" strokeWidth={3} />
+                  <Check className="size-6 sm:size-4" strokeWidth={3} />
                 </button>
               )
             ) : (
@@ -129,14 +146,14 @@ export function WorkoutCard({
                   type="button"
                   title="Mark done as planned"
                   aria-label="Mark done as planned"
-                  onPointerDown={(e) => e.stopPropagation()}
+                  {...stopDragStart}
                   onClick={(e) => {
                     e.stopPropagation()
                     onMarkDone()
                   }}
-                  className="flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-muted-foreground/40 text-muted-foreground/70 transition-colors hover:border-green-500 hover:text-green-600"
+                  className="flex size-11 shrink-0 items-center justify-center rounded-full border-2 border-green-600/60 bg-white/70 text-green-700/80 transition-colors hover:border-green-500 hover:text-green-600 sm:size-6 sm:border-muted-foreground/40 sm:bg-transparent sm:text-muted-foreground/70"
                 >
-                  <Check className="size-4" strokeWidth={3} />
+                  <Check className="size-6 sm:size-4" strokeWidth={3} />
                 </button>
               )
             )}

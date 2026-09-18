@@ -4,7 +4,8 @@ import { useMemo, useState } from "react"
 import {
   DndContext,
   DragOverlay,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -18,7 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { WeekView } from "@/components/calendar/WeekView"
 import { MonthView } from "@/components/calendar/MonthView"
-import { WorkoutCard } from "@/components/calendar/WorkoutCard"
+import { TOUCH_DRAG_DELAY_MS, WorkoutCard } from "@/components/calendar/WorkoutCard"
 import { WorkoutFormDialog } from "@/components/calendar/WorkoutFormDialog"
 import { CompletionFormDialog } from "@/components/calendar/CompletionFormDialog"
 import { usePlannedWorkouts, type PlannedWorkout } from "@/hooks/usePlannedWorkouts"
@@ -39,10 +40,17 @@ export default function CalendarPage() {
   const [anchor, setAnchor] = useState(new Date())
   const [activeDragId, setActiveDragId] = useState<number | null>(null)
 
-  // Require real pointer movement before a drag activates, so a plain click
-  // on a WorkoutCard still fires its onClick instead of being swallowed as a
-  // zero-distance drag.
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+  // Mouse: drag after moving a few pixels, so a plain click still opens the
+  // card. Touch: drag only after a short press-and-hold, otherwise the
+  // browser owns the gesture and the calendar scrolls normally. (A single
+  // PointerSensor can't do both: on touch it needs `touch-action: none`,
+  // which would make every card block page scrolling.)
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: TOUCH_DRAG_DELAY_MS, tolerance: 8 },
+    })
+  )
 
   const range = useMemo(
     () => (view === "week" ? weekRange(anchor) : monthRange(anchor)),
@@ -212,7 +220,12 @@ export default function CalendarPage() {
           ))}
         </div>
       ) : (
-        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <DndContext
+          sensors={sensors}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={() => setActiveDragId(null)}
+        >
           {view === "week" ? (
             <WeekView
               days={range.days}

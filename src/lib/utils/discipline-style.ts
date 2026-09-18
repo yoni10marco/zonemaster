@@ -2,47 +2,49 @@ import { Activity, Bike, Dumbbell, Footprints, Waves, type LucideIcon } from "lu
 
 import type { Discipline } from "@/lib/types/domain"
 
-// Deliberately multi-hue and distinct from the app's blue/cyan chrome: this
-// is a categorical legend (swim vs. bike vs. run...), and a legend only
-// works if each category has its own recognizable color.
+// Each discipline gets its own clearly different hue (teal / amber / rose /
+// fuchsia) so the color alone tells you the activity at a glance — and none of
+// them is green, which is reserved for the "completed" check. Cards use a
+// solid tint plus a thick left accent bar, not a faint gradient, so activities
+// stay distinguishable side by side in a week.
 export const DISCIPLINE_STYLES: Record<
   Discipline,
   { badge: string; dot: string; card: string; iconBg: string; text: string }
 > = {
   swim: {
-    badge: "bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300",
-    dot: "bg-cyan-500",
-    card: "border-cyan-200 bg-gradient-to-br from-cyan-50 to-cyan-100/60 dark:border-cyan-900/60 dark:from-cyan-950/50 dark:to-cyan-950/20",
-    iconBg: "bg-cyan-500/15 text-cyan-600 dark:bg-cyan-400/15 dark:text-cyan-300",
-    text: "text-cyan-700 dark:text-cyan-300",
+    badge: "bg-teal-300 text-teal-950 dark:bg-teal-800 dark:text-teal-100",
+    dot: "bg-teal-500",
+    card: "border-teal-300 border-l-4 border-l-teal-600 bg-teal-100 dark:border-teal-800 dark:border-l-teal-400 dark:bg-teal-950/70",
+    iconBg: "bg-teal-600 text-white dark:bg-teal-500 dark:text-teal-950",
+    text: "text-teal-800 dark:text-teal-300",
   },
   bike: {
-    badge: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300",
-    dot: "bg-blue-500",
-    card: "border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100/60 dark:border-blue-900/60 dark:from-blue-950/50 dark:to-blue-950/20",
-    iconBg: "bg-blue-500/15 text-blue-600 dark:bg-blue-400/15 dark:text-blue-300",
-    text: "text-blue-700 dark:text-blue-300",
+    badge: "bg-amber-300 text-amber-950 dark:bg-amber-800 dark:text-amber-100",
+    dot: "bg-amber-500",
+    card: "border-amber-300 border-l-4 border-l-amber-600 bg-amber-100 dark:border-amber-800 dark:border-l-amber-400 dark:bg-amber-950/70",
+    iconBg: "bg-amber-600 text-white dark:bg-amber-500 dark:text-amber-950",
+    text: "text-amber-800 dark:text-amber-300",
   },
   run: {
-    badge: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
-    dot: "bg-emerald-500",
-    card: "border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100/60 dark:border-emerald-900/60 dark:from-emerald-950/50 dark:to-emerald-950/20",
-    iconBg: "bg-emerald-500/15 text-emerald-600 dark:bg-emerald-400/15 dark:text-emerald-300",
-    text: "text-emerald-700 dark:text-emerald-300",
+    badge: "bg-rose-300 text-rose-950 dark:bg-rose-800 dark:text-rose-100",
+    dot: "bg-rose-500",
+    card: "border-rose-300 border-l-4 border-l-rose-600 bg-rose-100 dark:border-rose-800 dark:border-l-rose-400 dark:bg-rose-950/70",
+    iconBg: "bg-rose-600 text-white dark:bg-rose-500 dark:text-rose-950",
+    text: "text-rose-800 dark:text-rose-300",
   },
   strength: {
-    badge: "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300",
-    dot: "bg-violet-500",
-    card: "border-violet-200 bg-gradient-to-br from-violet-50 to-violet-100/60 dark:border-violet-900/60 dark:from-violet-950/50 dark:to-violet-950/20",
-    iconBg: "bg-violet-500/15 text-violet-600 dark:bg-violet-400/15 dark:text-violet-300",
-    text: "text-violet-700 dark:text-violet-300",
+    badge: "bg-fuchsia-300 text-fuchsia-950 dark:bg-fuchsia-800 dark:text-fuchsia-100",
+    dot: "bg-fuchsia-500",
+    card: "border-fuchsia-300 border-l-4 border-l-fuchsia-600 bg-fuchsia-100 dark:border-fuchsia-800 dark:border-l-fuchsia-400 dark:bg-fuchsia-950/70",
+    iconBg: "bg-fuchsia-600 text-white dark:bg-fuchsia-500 dark:text-fuchsia-950",
+    text: "text-fuchsia-800 dark:text-fuchsia-300",
   },
   other: {
-    badge: "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300",
+    badge: "bg-slate-300 text-slate-950 dark:bg-slate-800 dark:text-slate-100",
     dot: "bg-slate-500",
-    card: "border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100/60 dark:border-slate-800 dark:from-slate-900/50 dark:to-slate-900/20",
-    iconBg: "bg-slate-500/15 text-slate-600 dark:bg-slate-400/15 dark:text-slate-300",
-    text: "text-slate-700 dark:text-slate-300",
+    card: "border-slate-300 border-l-4 border-l-slate-600 bg-slate-100 dark:border-slate-800 dark:border-l-slate-400 dark:bg-slate-950/70",
+    iconBg: "bg-slate-600 text-white dark:bg-slate-500 dark:text-slate-950",
+    text: "text-slate-800 dark:text-slate-300",
   },
 }
 

@@ -28,8 +28,7 @@ function describeCompleted(c: Completed): string {
   if (c.avg_heart_rate) parts.push(`avg HR ${c.avg_heart_rate}`)
   if (c.avg_pace_or_power) parts.push(c.avg_pace_or_power)
   if (c.rpe) parts.push(`RPE ${c.rpe}`)
-  const tags = [c.source === "strava" ? "Strava" : "manual", c.planned_workout_id ? "planned" : "unplanned"]
-  return `- ${parts.join(", ")} [${tags.join(", ")}]`
+  return `- ${parts.join(", ")} [${c.planned_workout_id ? "planned" : "unplanned"}]`
 }
 
 function describePlanned(p: Planned): string {

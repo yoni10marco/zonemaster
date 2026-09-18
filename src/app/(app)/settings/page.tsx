@@ -1,10 +1,27 @@
-import { Link2, UserCog } from "lucide-react"
+import { UserCog } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ProfileEditForm } from "@/components/auth/ProfileEditForm"
+import { StravaConnection } from "@/components/settings/StravaConnection"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { createClient } from "@/lib/supabase/server"
+import { stravaConfig } from "@/lib/strava/client"
 
-export default function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ strava?: string }>
+}) {
+  const { strava } = await searchParams
+
+  // Token columns are not readable by the browser role, so select only the
+  // status fields explicitly (a `select *` would be rejected).
+  const supabase = await createClient()
+  const { data: integration } = await supabase
+    .from("integrations")
+    .select("connected_at, last_synced_at")
+    .eq("provider", "strava")
+    .maybeSingle()
+
   return (
     <div className="max-w-lg space-y-6">
       <div>
@@ -18,27 +35,19 @@ export default function SettingsPage() {
             <UserCog className="size-4 text-primary" />
             Training profile
           </CardTitle>
-          <CardDescription>Used to tailor your training plan and, later, AI coaching.</CardDescription>
+          <CardDescription>Used to tailor your training plan and AI coaching.</CardDescription>
         </CardHeader>
         <CardContent>
           <ProfileEditForm />
         </CardContent>
       </Card>
 
-      <Card className="opacity-60">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Link2 className="size-4" />
-              Strava
-            </CardTitle>
-            <Badge variant="secondary">Coming soon</Badge>
-          </div>
-          <CardDescription>
-            Automatically sync completed activities from Strava. Not yet available.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <StravaConnection
+        configured={stravaConfig() !== null}
+        connected={!!integration?.connected_at}
+        lastSyncedAt={integration?.last_synced_at ?? null}
+        notice={strava ?? null}
+      />
     </div>
   )
 }

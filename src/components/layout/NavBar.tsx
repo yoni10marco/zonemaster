@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { CalendarDays, LayoutDashboard, Zap } from "lucide-react"
+import { CalendarDays, LayoutDashboard, Sparkles, Zap } from "lucide-react"
 
 import { UserMenu } from "@/components/layout/UserMenu"
 
@@ -28,6 +28,13 @@ export function NavBar({ email }: { email: string }) {
           >
             <LayoutDashboard className="size-4 shrink-0" />
             <span className="hidden sm:inline">Dashboard</span>
+          </Link>
+          <Link
+            href="/coach"
+            className="flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <Sparkles className="size-4 shrink-0" />
+            <span className="hidden sm:inline">Coach</span>
           </Link>
         </nav>
         <UserMenu email={email} />

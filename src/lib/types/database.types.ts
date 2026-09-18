@@ -111,6 +111,7 @@ export type Database = {
           created_at: string
           expires_at: string | null
           id: number
+          last_synced_at: string | null
           provider: string
           refresh_token: string | null
           user_id: string
@@ -122,6 +123,7 @@ export type Database = {
           created_at?: string
           expires_at?: string | null
           id?: never
+          last_synced_at?: string | null
           provider?: string
           refresh_token?: string | null
           user_id: string
@@ -133,6 +135,7 @@ export type Database = {
           created_at?: string
           expires_at?: string | null
           id?: never
+          last_synced_at?: string | null
           provider?: string
           refresh_token?: string | null
           user_id?: string

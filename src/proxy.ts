@@ -13,7 +13,8 @@ export const config = {
      * - _next/static, _next/image (Next.js internals)
      * - favicon.ico
      * - image/font/svg assets
+     * - api/cron (called by Vercel with a bearer secret, no user session)
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/cron|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 }

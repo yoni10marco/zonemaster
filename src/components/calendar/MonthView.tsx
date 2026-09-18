@@ -12,6 +12,7 @@ type MonthViewProps = {
   onAdd: (dateISO: string) => void
   onWorkoutClick: (workout: PlannedWorkout) => void
   onMarkDone: (workout: PlannedWorkout) => void
+  onUnmarkDone: (workout: PlannedWorkout) => void
 }
 
 export function MonthView({
@@ -22,9 +23,10 @@ export function MonthView({
   onAdd,
   onWorkoutClick,
   onMarkDone,
+  onUnmarkDone,
 }: MonthViewProps) {
   return (
-    <div className="grid grid-cols-7 gap-1.5">
+    <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
       {days.map((day) => {
         const dateISO = toISODate(day)
         return (
@@ -36,6 +38,7 @@ export function MonthView({
             onAdd={onAdd}
             onWorkoutClick={onWorkoutClick}
             onMarkDone={onMarkDone}
+            onUnmarkDone={onUnmarkDone}
             compact
             dimmed={day.getMonth() !== anchor.getMonth()}
           />

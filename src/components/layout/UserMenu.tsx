@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { UserRound } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -27,8 +28,9 @@ export function UserMenu({ email }: { email: string }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm">
-          {email}
+        <Button variant="ghost" size="sm" className="max-w-[10rem] gap-1.5 sm:max-w-none">
+          <UserRound className="size-4 shrink-0" />
+          <span className="truncate">{email}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

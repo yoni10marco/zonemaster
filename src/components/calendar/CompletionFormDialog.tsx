@@ -29,16 +29,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Slider } from "@/components/ui/slider"
-import { Textarea } from "@/components/ui/textarea"
 import type { PlannedWorkout } from "@/hooks/usePlannedWorkouts"
 import type { CompletedWorkout, useCompletedWorkouts } from "@/hooks/useCompletedWorkouts"
 import { DISCIPLINES, DISCIPLINE_LABELS } from "@/lib/types/domain"
-import {
-  completionSchema,
-  parseOptionalNumber,
-  type CompletionInput,
-} from "@/lib/validation/workout"
+import { completionSchema, type CompletionInput } from "@/lib/validation/workout"
 
 type CompletionFormDialogProps = {
   open: boolean
@@ -51,6 +45,7 @@ type CompletionFormDialogProps = {
   defaultDate: string
   logCompletion: ReturnType<typeof useCompletedWorkouts>["logCompletion"]
   updateCompletion: ReturnType<typeof useCompletedWorkouts>["updateCompletion"]
+  deleteCompletion: ReturnType<typeof useCompletedWorkouts>["deleteCompletion"]
   findLinkCandidate: ReturnType<typeof useCompletedWorkouts>["findLinkCandidate"]
 }
 
@@ -62,6 +57,7 @@ export function CompletionFormDialog({
   defaultDate,
   logCompletion,
   updateCompletion,
+  deleteCompletion,
   findLinkCandidate,
 }: CompletionFormDialogProps) {
   const [submitting, setSubmitting] = useState(false)
@@ -72,10 +68,6 @@ export function CompletionFormDialog({
     defaultValues: {
       executionDate: defaultDate,
       discipline: "run",
-      actualDurationMinutes: undefined,
-      actualDistanceKm: undefined,
-      rpe: 5,
-      notes: "",
     },
   })
 
@@ -85,44 +77,22 @@ export function CompletionFormDialog({
       form.reset({
         executionDate: existingCompletion.execution_date,
         discipline: existingCompletion.discipline,
-        actualDurationMinutes: existingCompletion.actual_duration_minutes?.toString() ?? "",
-        actualDistanceKm: existingCompletion.actual_distance_km?.toString() ?? "",
-        rpe: existingCompletion.rpe ?? 5,
-        notes: existingCompletion.notes ?? "",
       })
       return
     }
     form.reset({
       executionDate: plannedWorkout?.target_date ?? defaultDate,
       discipline: plannedWorkout?.discipline ?? "run",
-      actualDurationMinutes: plannedWorkout?.planned_duration_minutes?.toString() ?? "",
-      actualDistanceKm: plannedWorkout?.planned_distance_km?.toString() ?? "",
-      rpe: 5,
-      notes: "",
     })
   }, [open, plannedWorkout, existingCompletion, defaultDate, form])
 
   async function onSubmit(values: CompletionInput) {
     setSubmitting(true)
     try {
-      const enteredDuration = parseOptionalNumber(values.actualDurationMinutes)
-      const enteredDistance = parseOptionalNumber(values.actualDistanceKm)
-      // Leaving both blank means "I just want to mark this done" rather than
-      // "I did nothing" — default to the plan instead of storing an empty
-      // actual, so a quick log never reads as an incomplete workout.
-      const loggedNothing = enteredDuration === null && enteredDistance === null
-
       if (existingCompletion) {
-        const fallbackDuration = plannedWorkout?.planned_duration_minutes ?? existingCompletion.actual_duration_minutes
-        const fallbackDistance = plannedWorkout?.planned_distance_km ?? existingCompletion.actual_distance_km
-
         await updateCompletion(existingCompletion.id, {
           execution_date: values.executionDate,
           discipline: values.discipline as PlannedWorkout["discipline"],
-          actual_duration_minutes: loggedNothing ? fallbackDuration : enteredDuration,
-          actual_distance_km: loggedNothing ? fallbackDistance : enteredDistance,
-          rpe: values.rpe,
-          notes: values.notes || null,
         })
 
         toast.success("Completion updated")
@@ -152,14 +122,28 @@ export function CompletionFormDialog({
         planned_workout_id: plannedWorkoutId,
         execution_date: values.executionDate,
         discipline: values.discipline as PlannedWorkout["discipline"],
-        actual_duration_minutes: loggedNothing ? fallbackDuration : enteredDuration,
-        actual_distance_km: loggedNothing ? fallbackDistance : enteredDistance,
-        rpe: values.rpe,
-        notes: values.notes || null,
+        actual_duration_minutes: fallbackDuration,
+        actual_distance_km: fallbackDistance,
+        rpe: null,
+        notes: null,
         source: "manual",
       })
 
       toast.success("Completion logged")
+      onOpenChange(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Something went wrong")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (!existingCompletion) return
+    setSubmitting(true)
+    try {
+      await deleteCompletion(existingCompletion.id)
+      toast.success("Activity log removed")
       onOpenChange(false)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong")
@@ -219,86 +203,12 @@ export function CompletionFormDialog({
               )}
             />
 
-            <p className="text-xs text-muted-foreground">
-              Leave duration and distance blank to just mark it completed as planned.
-            </p>
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="actualDurationMinutes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Duration (min, optional)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={field.value ?? ""}
-                        onChange={(e) => field.onChange(e.target.value)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="actualDistanceKm"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Distance (km, optional)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min={0}
-                        step="0.1"
-                        value={field.value ?? ""}
-                        onChange={(e) => field.onChange(e.target.value)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="rpe"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>RPE: {field.value}</FormLabel>
-                  <FormControl>
-                    <Slider
-                      min={1}
-                      max={10}
-                      step={1}
-                      value={[Number(field.value)]}
-                      onValueChange={([v]) => field.onChange(v)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+            <DialogFooter className={isEditing ? "flex-col-reverse gap-2 sm:flex-row sm:justify-between" : undefined}>
+              {isEditing && (
+                <Button type="button" variant="destructive" disabled={submitting} onClick={handleDelete}>
+                  Remove activity log
+                </Button>
               )}
-            />
-
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes (optional)</FormLabel>
-                  <FormControl>
-                    <Textarea rows={3} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <DialogFooter>
               <Button type="submit" disabled={submitting}>
                 {submitting ? "Saving..." : isEditing ? "Save changes" : "Log completion"}
               </Button>

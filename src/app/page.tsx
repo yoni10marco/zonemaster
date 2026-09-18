@@ -2,6 +2,7 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { Zap } from "lucide-react"
 
+import { BackgroundIcons } from "@/components/layout/BackgroundIcons"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/server"
 
@@ -17,6 +18,7 @@ export default async function Home() {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 bg-background px-6 text-center">
+      <BackgroundIcons />
       <div className="space-y-3">
         <div className="flex items-center justify-center gap-2">
           <Zap className="size-8 text-brand-blue" />

@@ -80,6 +80,13 @@ export function useCompletedWorkouts(rangeStart: Date | null, rangeEnd: Date | n
     return data
   }
 
+  async function deleteCompletion(id: number) {
+    const supabase = createClient()
+    const { error } = await supabase.from("completed_workouts").delete().eq("id", id)
+    if (error) throw new Error(error.message)
+    setCompletions((prev) => prev.filter((c) => c.id !== id))
+  }
+
   // Find an existing planned workout for the same date+discipline with no
   // linked completion yet, so a standalone log can prompt to link to it.
   // Returns the planned duration/distance too, so a completion left blank
@@ -110,5 +117,14 @@ export function useCompletedWorkouts(rangeStart: Date | null, rangeEnd: Date | n
     return candidates.length === 1 ? candidates[0] : null
   }
 
-  return { completions, loading, error, refetch, logCompletion, updateCompletion, findLinkCandidate }
+  return {
+    completions,
+    loading,
+    error,
+    refetch,
+    logCompletion,
+    updateCompletion,
+    deleteCompletion,
+    findLinkCandidate,
+  }
 }

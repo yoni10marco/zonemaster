@@ -1,7 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { Trash2 } from "lucide-react"
+import { toast } from "sonner"
 
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -55,6 +58,16 @@ export function ActivityListDialog({ discipline, onOpenChange }: ActivityListDia
     }
   }, [discipline])
 
+  async function handleDelete(id: number) {
+    const { error } = await createClient().from("completed_workouts").delete().eq("id", id)
+    if (error) {
+      toast.error(error.message)
+      return
+    }
+    setActivities((prev) => prev.filter((a) => a.id !== id))
+    toast.success("Activity log removed")
+  }
+
   const Icon = discipline ? DISCIPLINE_ICONS[discipline] : null
 
   return (
@@ -88,6 +101,16 @@ export function ActivityListDialog({ discipline, onOpenChange }: ActivityListDia
                   {activity.actual_distance_km ? `${activity.actual_distance_km} km` : null}
                   {activity.rpe ? ` · RPE ${activity.rpe}` : null}
                 </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Remove activity log"
+                  onClick={() => handleDelete(activity.id)}
+                  className="shrink-0 text-muted-foreground hover:text-destructive"
+                >
+                  <Trash2 className="size-4" />
+                </Button>
               </div>
             ))}
           </div>

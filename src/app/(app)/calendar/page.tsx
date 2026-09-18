@@ -58,10 +58,8 @@ export default function CalendarPage() {
     rescheduleWorkout,
   } = usePlannedWorkouts(range.start, range.end)
 
-  const { completions, logCompletion, updateCompletion, findLinkCandidate } = useCompletedWorkouts(
-    range.start,
-    range.end
-  )
+  const { completions, logCompletion, updateCompletion, deleteCompletion, findLinkCandidate } =
+    useCompletedWorkouts(range.start, range.end)
 
   const workoutsByDate = useMemo(() => {
     const map = new Map<string, PlannedWorkout[]>()
@@ -126,6 +124,17 @@ export default function CalendarPage() {
     }
   }
 
+  async function handleUnmarkDone(workout: PlannedWorkout) {
+    const completion = completionByPlannedId.get(workout.id)
+    if (!completion) return
+    try {
+      await deleteCompletion(completion.id)
+      toast.success("Removed")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to remove")
+    }
+  }
+
   function handleDragStart(event: DragStartEvent) {
     const id = event.active.data.current?.workoutId as number | undefined
     setActiveDragId(id ?? null)
@@ -155,11 +164,11 @@ export default function CalendarPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => setAnchor(prevAnchor(anchor, view))}>
             Prev
           </Button>
-          <h1 className="font-heading min-w-40 text-center text-lg font-semibold">
+          <h1 className="font-heading min-w-28 text-center text-sm font-semibold sm:min-w-40 sm:text-lg">
             {view === "week"
               ? `${format(range.start, "MMM d")} – ${format(range.end, "MMM d, yyyy")}`
               : format(anchor, "MMMM yyyy")}
@@ -171,7 +180,7 @@ export default function CalendarPage() {
             Today
           </Button>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -212,6 +221,7 @@ export default function CalendarPage() {
               onAdd={handleAdd}
               onWorkoutClick={handleWorkoutClick}
               onMarkDone={handleMarkDone}
+              onUnmarkDone={handleUnmarkDone}
             />
           ) : (
             <MonthView
@@ -222,6 +232,7 @@ export default function CalendarPage() {
               onAdd={handleAdd}
               onWorkoutClick={handleWorkoutClick}
               onMarkDone={handleMarkDone}
+              onUnmarkDone={handleUnmarkDone}
             />
           )}
           <DragOverlay>
@@ -262,6 +273,7 @@ export default function CalendarPage() {
           defaultDate={dialogState.date}
           logCompletion={logCompletion}
           updateCompletion={updateCompletion}
+          deleteCompletion={deleteCompletion}
           findLinkCandidate={findLinkCandidate}
         />
       )}

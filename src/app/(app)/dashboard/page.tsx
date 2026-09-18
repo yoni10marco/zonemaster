@@ -44,13 +44,15 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {period !== "all" && (
             <>
               <Button variant="outline" size="sm" onClick={() => setAnchor(prevAnchor(anchor, period))}>
                 Prev
               </Button>
-              <h1 className="font-heading min-w-48 text-center text-lg font-semibold">{periodLabel}</h1>
+              <h1 className="font-heading min-w-32 text-center text-sm font-semibold sm:min-w-48 sm:text-lg">
+                {periodLabel}
+              </h1>
               <Button variant="outline" size="sm" onClick={() => setAnchor(nextAnchor(anchor, period))}>
                 Next
               </Button>

@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
         },
       ],
       responseSchema: PLAN_RESPONSE_SCHEMA,
-      maxOutputTokens: 4096,
+      maxOutputTokens: 8192,
       temperature: 0.6,
     })
 

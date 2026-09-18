@@ -10,23 +10,23 @@ import { toISODate } from "@/lib/utils/dates"
 export type CompletedWorkout = Tables<"completed_workouts">
 export type CompletedWorkoutInsert = TablesInsert<"completed_workouts">
 
-export function useCompletedWorkouts(rangeStart: Date, rangeEnd: Date) {
+// null start/end means unbounded ("all time") — RLS still scopes results to
+// the current user, so this never leaks other users' data.
+export function useCompletedWorkouts(rangeStart: Date | null, rangeEnd: Date | null) {
   const [completions, setCompletions] = useState<CompletedWorkout[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const startISO = toISODate(rangeStart)
-  const endISO = toISODate(rangeEnd)
+  const startISO = rangeStart ? toISODate(rangeStart) : null
+  const endISO = rangeEnd ? toISODate(rangeEnd) : null
 
   const refetch = useCallback(async () => {
     setLoading(true)
     const supabase = createClient()
-    const { data, error } = await supabase
-      .from("completed_workouts")
-      .select("*")
-      .gte("execution_date", startISO)
-      .lte("execution_date", endISO)
-      .order("execution_date", { ascending: true })
+    let query = supabase.from("completed_workouts").select("*")
+    if (startISO) query = query.gte("execution_date", startISO)
+    if (endISO) query = query.lte("execution_date", endISO)
+    const { data, error } = await query.order("execution_date", { ascending: true })
 
     if (error) {
       setError(error.message)

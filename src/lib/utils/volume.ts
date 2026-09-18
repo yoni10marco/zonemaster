@@ -5,39 +5,6 @@ import type { Tables } from "@/lib/types/database.types"
 type PlannedWorkout = Tables<"planned_workouts">
 type CompletedWorkout = Tables<"completed_workouts">
 
-export type DisciplineVolume = {
-  discipline: Discipline
-  plannedMinutes: number
-  plannedKm: number
-  actualMinutes: number
-  actualKm: number
-}
-
-export function aggregateVolume(
-  planned: PlannedWorkout[],
-  completed: CompletedWorkout[]
-): DisciplineVolume[] {
-  return DISCIPLINES.map((discipline) => {
-    const plannedForDiscipline = planned.filter((w) => w.discipline === discipline)
-    const completedForDiscipline = completed.filter((w) => w.discipline === discipline)
-
-    return {
-      discipline,
-      plannedMinutes: sum(plannedForDiscipline, "planned_duration_minutes"),
-      plannedKm: sum(plannedForDiscipline, "planned_distance_km"),
-      actualMinutes: sum(completedForDiscipline, "actual_duration_minutes"),
-      actualKm: sum(completedForDiscipline, "actual_distance_km"),
-    }
-  }).filter((v) => v.plannedMinutes || v.plannedKm || v.actualMinutes || v.actualKm)
-}
-
-function sum<T extends Record<string, unknown>>(rows: T[], key: keyof T): number {
-  return rows.reduce((total, row) => {
-    const value = row[key]
-    return total + (typeof value === "number" ? value : 0)
-  }, 0)
-}
-
 export type SessionCompletion = { completed: number; total: number }
 
 // Session-count completion sidesteps the unit problem entirely (a discipline
@@ -55,6 +22,18 @@ export function sessionCompletion(
   return { completed: completedCount, total: planned.length }
 }
 
-export function minutesToHours(minutes: number): number {
-  return Math.round((minutes / 60) * 10) / 10
+export type DisciplineActivityCount = {
+  discipline: Discipline
+  count: number
+}
+
+// A plain count per discipline, deliberately with no duration/distance
+// mixed in — those units aren't comparable across disciplines (or even
+// within one, since the same discipline can be tracked either way from
+// session to session), so the dashboard shows "how many", not "how much".
+export function activityCounts(completed: CompletedWorkout[]): DisciplineActivityCount[] {
+  return DISCIPLINES.map((discipline) => ({
+    discipline,
+    count: completed.filter((w) => w.discipline === discipline).length,
+  })).filter((d) => d.count > 0)
 }

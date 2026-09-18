@@ -1,12 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { SessionCompletion } from "@/lib/utils/volume"
 
-export function SessionCompletionCard({ completed, total }: SessionCompletion) {
+type SessionCompletionCardProps = SessionCompletion & { periodLabel: string }
+
+export function SessionCompletionCard({ completed, total, periodLabel }: SessionCompletionCardProps) {
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-sm font-medium text-muted-foreground">
-          This week&apos;s completion rate
+          {periodLabel} completion rate
         </CardTitle>
       </CardHeader>
       <CardContent>

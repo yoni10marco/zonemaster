@@ -57,3 +57,39 @@ export function describeOthers(summary: SharedSummary): string {
   const hidden = summary.others.length - shown.length
   return hidden > 0 ? `${shown.join(", ")} +${hidden} more` : shown.join(", ")
 }
+
+export type TogetherPartner = { userId: string; name: string; count: number }
+
+export type TogetherStats = {
+  /** Sessions in the period that at least one other person accepted. */
+  planned: number
+  /** Of those, sessions you and someone else both completed. */
+  done: number
+  /** Who you trained with, most often first. */
+  partners: TogetherPartner[]
+}
+
+/** The "Trained together" numbers for the given sessions (one member list per session). */
+export function togetherStats(sessions: SessionMember[][]): TogetherStats {
+  let planned = 0
+  let done = 0
+  const partners = new Map<string, TogetherPartner>()
+  for (const members of sessions) {
+    const summary = summarizeSession(members)
+    const accepted = summary.others.filter((m) => m.status === "accepted")
+    if (accepted.length === 0) continue
+    planned++
+    if (!summary.doneTogether) continue
+    done++
+    for (const m of accepted.filter((a) => a.completed)) {
+      const seen = partners.get(m.userId)
+      if (seen) seen.count++
+      else partners.set(m.userId, { userId: m.userId, name: m.username ?? NAME_FALLBACK, count: 1 })
+    }
+  }
+  return {
+    planned,
+    done,
+    partners: [...partners.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
+  }
+}

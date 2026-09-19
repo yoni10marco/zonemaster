@@ -10,9 +10,12 @@ import { ActivityListDialog } from "@/components/dashboard/ActivityListDialog"
 import { DisciplineCards } from "@/components/dashboard/DisciplineCards"
 import { ProgressSection } from "@/components/dashboard/ProgressSection"
 import { SessionCompletionCard } from "@/components/dashboard/SessionCompletionCard"
+import { TrainedTogetherCard } from "@/components/dashboard/TrainedTogetherCard"
 import { usePlannedWorkouts } from "@/hooks/usePlannedWorkouts"
 import { useCompletedWorkouts } from "@/hooks/useCompletedWorkouts"
 import { useProfile } from "@/hooks/useProfile"
+import { useSharedSessions } from "@/hooks/useSharedSessions"
+import { togetherStats } from "@/lib/friends/shared-session"
 import type { Discipline } from "@/lib/types/domain"
 import { format, monthRange, nextAnchor, prevAnchor, weekRange } from "@/lib/utils/dates"
 import { raceCountdown, weekStreak, weeklyTrend } from "@/lib/utils/progress"
@@ -45,6 +48,20 @@ export default function DashboardPage() {
   const sessions = useMemo(() => sessionCompletion(workouts, completions), [workouts, completions])
   const counts = useMemo(() => activityCounts(completions), [completions])
 
+  // Trained together: the shared sessions among this period's workouts, plus who
+  // finished them (refetched when completions change).
+  const sharedIds = useMemo(
+    () => workouts.flatMap((w) => (w.shared_session_id ? [w.shared_session_id] : [])),
+    [workouts]
+  )
+  const completedKey = useMemo(() => completions.map((c) => c.id).join(","), [completions])
+  const { members: sharedMembers } = useSharedSessions(sharedIds, completedKey)
+  const together = useMemo(
+    () => togetherStats(sharedIds.flatMap((id) => (sharedMembers.has(id) ? [sharedMembers.get(id)!] : []))),
+    [sharedIds, sharedMembers]
+  )
+
+  const periodPrefix = period === "all" ? "All-time" : period === "week" ? "This week's" : "This month's"
   const loading = loadingPlanned || loadingCompleted
 
   // Progress panel: fixed windows independent of the period selector above.
@@ -106,8 +123,9 @@ export default function DashboardPage() {
           <SessionCompletionCard
             completed={sessions.completed}
             total={sessions.total}
-            periodLabel={period === "all" ? "All-time" : period === "week" ? "This week's" : "This month's"}
+            periodLabel={periodPrefix}
           />
+          <TrainedTogetherCard stats={together} periodLabel={periodPrefix} />
           <DisciplineCards counts={counts} onSelect={setSelectedDiscipline} />
           <ProgressSection
             race={progress.race}

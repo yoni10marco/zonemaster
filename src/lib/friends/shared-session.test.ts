@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   describeOthers,
   summarizeSession,
+  togetherStats,
   type SessionMember,
 } from "@/lib/friends/shared-session"
 
@@ -81,5 +82,54 @@ describe("describeOthers", () => {
   it("has a fallback for someone without a username", () => {
     const s = summarizeSession([me(), member("x", { username: null })])
     expect(describeOthers(s)).toBe("someone")
+  })
+})
+
+describe("togetherStats", () => {
+  const m = (userId: string, o: Partial<SessionMember> = {}): SessionMember => ({
+    userId,
+    username: userId,
+    status: "accepted",
+    completed: false,
+    isMe: false,
+    isCreator: false,
+    ...o,
+  })
+  const me = (completed: boolean) => m("me", { isMe: true, completed })
+
+  it("is all zeros with no shared sessions", () => {
+    expect(togetherStats([])).toEqual({ planned: 0, done: 0, partners: [] })
+  })
+
+  it("counts a session as planned once someone accepted, and done once you both completed", () => {
+    const stats = togetherStats([
+      [me(true), m("bobby", { completed: true })], // done together
+      [me(true), m("bobby", { completed: false })], // only I finished
+      [me(false), m("bobby", { completed: true })], // only they finished
+      [me(true), m("carl", { status: "invited", completed: true })], // nobody accepted
+      [me(true), m("dora", { status: "declined" })],
+    ])
+    expect(stats.planned).toBe(3)
+    expect(stats.done).toBe(1)
+  })
+
+  it("ranks the people you trained with, most often first then by name", () => {
+    const stats = togetherStats([
+      [me(true), m("carl", { completed: true })],
+      [me(true), m("bobby", { completed: true }), m("carl", { completed: true })],
+      [me(true), m("bobby", { completed: true })],
+      [me(true), m("alex", { completed: true })],
+      [me(true), m("dora", { completed: false })], // did not finish, no credit
+    ])
+    expect(stats.partners.map((p) => [p.name, p.count])).toEqual([
+      ["bobby", 2],
+      ["carl", 2],
+      ["alex", 1],
+    ])
+  })
+
+  it("falls back to 'someone' for a partner without a username", () => {
+    const stats = togetherStats([[me(true), m("x", { username: null, completed: true })]])
+    expect(stats.partners[0].name).toBe("someone")
   })
 })

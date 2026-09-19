@@ -2,12 +2,14 @@
 
 import { useRef } from "react"
 import { useDraggable } from "@dnd-kit/core"
-import { Check, CheckCircle2 } from "lucide-react"
+import { Check, CheckCircle2, Users } from "lucide-react"
 
 import type { PlannedWorkout } from "@/hooks/usePlannedWorkouts"
 import { DISCIPLINE_LABELS, ZONE_LABELS } from "@/lib/types/domain"
 import { DISCIPLINE_ICONS, DISCIPLINE_STYLES } from "@/lib/utils/discipline-style"
+import { useSharedMembers } from "@/components/calendar/SharedSessionsContext"
 import { useZoneRanges } from "@/components/calendar/ZoneRangesContext"
+import { describeOthers, summarizeSession } from "@/lib/friends/shared-session"
 import { cn } from "@/lib/utils"
 import { formatDistance } from "@/lib/utils/distance"
 import { formatZoneRange } from "@/lib/utils/zones"
@@ -64,6 +66,9 @@ export function WorkoutCard({
 
   const pointerDownPos = useRef<{ x: number; y: number; time: number } | null>(null)
   const zoneRanges = useZoneRanges()
+  const isShared = workout.shared_session_id !== null
+  const sharedMembers = useSharedMembers(workout.shared_session_id)
+  const shared = sharedMembers ? summarizeSession(sharedMembers) : null
 
   const style = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
@@ -127,6 +132,7 @@ export function WorkoutCard({
           <span className="truncate text-[10px] font-medium">
             {workout.title || DISCIPLINE_LABELS[workout.discipline]}
           </span>
+          {isShared && <Users className="size-3 shrink-0" aria-label="Shared session" />}
           {completed && <CheckCircle2 className="ml-auto size-3.5 shrink-0 rounded-full bg-white text-green-600" />}
         </div>
       ) : (
@@ -188,6 +194,19 @@ export function WorkoutCard({
               {zoneRanges && (
                 <span className="block text-[11px] tabular-nums">
                   {formatZoneRange(zoneRanges[workout.target_zone])}
+                </span>
+              )}
+            </div>
+          )}
+          {isShared && (
+            <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <Users className="size-3 shrink-0" aria-hidden="true" />
+              <span className="truncate">
+                {shared && shared.others.length > 0 ? `With ${describeOthers(shared)}` : "Shared session"}
+              </span>
+              {shared?.doneTogether && (
+                <span className="ml-auto shrink-0 rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700 dark:bg-green-950 dark:text-green-300">
+                  Done together
                 </span>
               )}
             </div>

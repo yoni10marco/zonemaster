@@ -5,8 +5,10 @@ import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import { WorkoutCard } from "@/components/calendar/WorkoutCard"
+import { SharedSessionsProvider } from "@/components/calendar/SharedSessionsContext"
 import { ZoneRangesProvider } from "@/components/calendar/ZoneRangesContext"
 import type { PlannedWorkout } from "@/hooks/usePlannedWorkouts"
+import type { SessionMember } from "@/lib/friends/shared-session"
 import { computeZoneRanges } from "@/lib/utils/zones"
 
 function workout(overrides: Partial<PlannedWorkout> = {}): PlannedWorkout {
@@ -22,6 +24,7 @@ function workout(overrides: Partial<PlannedWorkout> = {}): PlannedWorkout {
     planned_duration_minutes: 45,
     planned_distance_km: 8,
     target_zone: "z2",
+    shared_session_id: null,
     ...overrides,
   }
 }
@@ -93,5 +96,68 @@ describe("WorkoutCard", () => {
     const card = screen.getByText("Easy run").closest("[data-workout-card]") as HTMLElement
     expect(card).toHaveAttribute("tabindex", "0")
     expect(card).toHaveAttribute("role", "button")
+  })
+})
+
+describe("WorkoutCard: shared sessions", () => {
+  const member = (userId: string, username: string, o: Partial<SessionMember> = {}): SessionMember => ({
+    userId,
+    username,
+    status: "accepted",
+    completed: false,
+    isMe: false,
+    isCreator: false,
+    ...o,
+  })
+
+  function renderShared(members: SessionMember[] | undefined, props: Partial<React.ComponentProps<typeof WorkoutCard>> = {}) {
+    const map = members ? new Map([[5, members]]) : new Map<number, SessionMember[]>()
+    return render(
+      <SharedSessionsProvider value={map}>
+        <DndContext>
+          <WorkoutCard workout={workout({ shared_session_id: 5 })} {...props} />
+        </DndContext>
+      </SharedSessionsProvider>
+    )
+  }
+
+  it("shows nothing extra on an ordinary workout", () => {
+    renderCard()
+    expect(screen.queryByText(/with /i)).not.toBeInTheDocument()
+    expect(screen.queryByText("Shared session")).not.toBeInTheDocument()
+  })
+
+  it("shows who else is in the session and their answers", () => {
+    renderShared([
+      member("me", "yoni", { isMe: true, isCreator: true }),
+      member("b", "bobby", { completed: true }),
+      member("c", "carl", { status: "invited" }),
+    ])
+    expect(screen.getByText("With bobby ✓, carl (waiting)")).toBeInTheDocument()
+  })
+
+  it("shows Done together once you and a friend have both completed it", () => {
+    renderShared([
+      member("me", "yoni", { isMe: true, isCreator: true, completed: true }),
+      member("b", "bobby", { completed: true }),
+    ])
+    expect(screen.getByText("Done together")).toBeInTheDocument()
+  })
+
+  it("does not claim Done together when only the friend has completed it", () => {
+    renderShared([member("me", "yoni", { isMe: true, isCreator: true }), member("b", "bobby", { completed: true })])
+    expect(screen.queryByText("Done together")).not.toBeInTheDocument()
+    expect(screen.getByText("With bobby ✓")).toBeInTheDocument()
+  })
+
+  it("still marks a shared workout before the member list has loaded", () => {
+    renderShared(undefined)
+    expect(screen.getByText("Shared session")).toBeInTheDocument()
+  })
+
+  it("shows a small people icon in the compact (month) view", () => {
+    renderShared([member("me", "yoni", { isMe: true }), member("b", "bobby")], { compact: true })
+    expect(screen.getByLabelText("Shared session")).toBeInTheDocument()
+    expect(screen.queryByText(/with bobby/i)).not.toBeInTheDocument()
   })
 })

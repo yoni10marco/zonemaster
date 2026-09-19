@@ -5,12 +5,18 @@ import { Users } from "lucide-react"
 import { AddFriendForm } from "@/components/friends/AddFriendForm"
 import { FriendsList, RequestsList } from "@/components/friends/FriendLists"
 import { MyFriendIdCard } from "@/components/friends/MyFriendIdCard"
+import { SessionInvitesList } from "@/components/friends/SessionInvitesList"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useFriends } from "@/hooks/useFriends"
+import { useSessionInvites } from "@/hooks/useSessionInvites"
 
 export default function FriendsPage() {
   const friends = useFriends()
+  const sessions = useSessionInvites()
+  // Everything waiting for an answer: friend requests and session invitations.
+  const waiting = friends.incoming.length + sessions.invites.length
+  const nothingPending = waiting === 0 && friends.outgoing.length === 0
 
   // They already asked you and are found again in a search: accept that request.
   async function acceptIncoming(userId: string) {
@@ -42,9 +48,9 @@ export default function FriendsPage() {
           <TabsTrigger value="friends">Friends</TabsTrigger>
           <TabsTrigger value="requests">
             Requests
-            {friends.incoming.length > 0 && (
+            {waiting > 0 && (
               <span className="ml-1 rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">
-                {friends.incoming.length}
+                {waiting}
               </span>
             )}
           </TabsTrigger>
@@ -68,16 +74,21 @@ export default function FriendsPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="requests">
-          {friends.loading ? (
+        <TabsContent value="requests" className="space-y-5">
+          {friends.loading || sessions.loading ? (
             <Skeleton className="h-16 w-full" />
           ) : (
-            <RequestsList
-              incoming={friends.incoming}
-              outgoing={friends.outgoing}
-              onRespond={friends.respond}
-              onCancel={friends.cancelRequest}
-            />
+            <>
+              <SessionInvitesList invites={sessions.invites} onRespond={sessions.respond} />
+              {(friends.incoming.length > 0 || friends.outgoing.length > 0 || nothingPending) && (
+                <RequestsList
+                  incoming={friends.incoming}
+                  outgoing={friends.outgoing}
+                  onRespond={friends.respond}
+                  onCancel={friends.cancelRequest}
+                />
+              )}
+            </>
           )}
         </TabsContent>
 

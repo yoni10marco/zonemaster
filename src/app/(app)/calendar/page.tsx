@@ -22,11 +22,13 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { WeekView } from "@/components/calendar/WeekView"
 import { MonthView } from "@/components/calendar/MonthView"
 import { TOUCH_DRAG_DELAY_MS, WorkoutCard } from "@/components/calendar/WorkoutCard"
+import { SharedSessionsProvider } from "@/components/calendar/SharedSessionsContext"
 import { WorkoutFormDialog } from "@/components/calendar/WorkoutFormDialog"
 import { ZoneRangesProvider } from "@/components/calendar/ZoneRangesContext"
 import { usePlannedWorkouts, type PlannedWorkout } from "@/hooks/usePlannedWorkouts"
 import { useCompletedWorkouts, type CompletedWorkout } from "@/hooks/useCompletedWorkouts"
 import { useProfile } from "@/hooks/useProfile"
+import { useSharedSessions } from "@/hooks/useSharedSessions"
 import {
   format,
   monthRange,
@@ -87,6 +89,7 @@ export default function CalendarPage() {
   const {
     workouts,
     loading,
+    refetch: refetchWorkouts,
     createWorkout,
     createWorkouts,
     copyWeek,
@@ -128,7 +131,17 @@ export default function CalendarPage() {
     [completionByPlannedId]
   )
 
+  // Who else is in the shared sessions on this page. Reloaded when a workout is
+  // ticked done (that changes who has completed it).
+  const sharedIds = workouts.flatMap((w) => (w.shared_session_id === null ? [] : [w.shared_session_id]))
+  const completedKey = [...completedWorkoutIds].sort((a, b) => a - b).join(",")
+  const { members: sharedMembers, refetch: refetchShared } = useSharedSessions(sharedIds, completedKey)
+
   const [dialogState, setDialogState] = useState<DialogState | null>(null)
+  // The open dialog shows the latest copy of its workout (it may just have been shared).
+  const dialogWorkout = dialogState?.workout
+    ? (workouts.find((w) => w.id === dialogState.workout!.id) ?? dialogState.workout)
+    : null
 
   function handleAdd(dateISO: string) {
     setDialogState({ date: dateISO, workout: null })
@@ -290,6 +303,7 @@ export default function CalendarPage() {
 
   return (
     <ZoneRangesProvider value={zoneRanges}>
+      <SharedSessionsProvider value={sharedMembers}>
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -382,14 +396,19 @@ export default function CalendarPage() {
             open
             onOpenChange={(open) => !open && setDialogState(null)}
             targetDate={dialogState.date}
-            workout={dialogState.workout}
+            workout={dialogWorkout}
             prefill={dialogState.prefill}
             mutations={{ createWorkout, createWorkouts, updateWorkout, deleteWorkout, deleteWorkouts }}
             onDeleted={handleDeleted}
             onDuplicate={handleDuplicate}
+            onSharedChanged={async () => {
+              await refetchWorkouts()
+              await refetchShared()
+            }}
           />
         )}
       </div>
+      </SharedSessionsProvider>
     </ZoneRangesProvider>
   )
 }

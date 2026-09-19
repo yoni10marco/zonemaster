@@ -201,6 +201,7 @@ export type Database = {
           notes: string | null
           planned_distance_km: number | null
           planned_duration_minutes: number | null
+          shared_session_id: number | null
           target_date: string
           target_zone: Database["public"]["Enums"]["intensity_zone"] | null
           title: string | null
@@ -214,6 +215,7 @@ export type Database = {
           notes?: string | null
           planned_distance_km?: number | null
           planned_duration_minutes?: number | null
+          shared_session_id?: number | null
           target_date: string
           target_zone?: Database["public"]["Enums"]["intensity_zone"] | null
           title?: string | null
@@ -227,6 +229,7 @@ export type Database = {
           notes?: string | null
           planned_distance_km?: number | null
           planned_duration_minutes?: number | null
+          shared_session_id?: number | null
           target_date?: string
           target_zone?: Database["public"]["Enums"]["intensity_zone"] | null
           title?: string | null
@@ -280,6 +283,72 @@ export type Database = {
         }
         Relationships: []
       }
+      shared_session_members: {
+        Row: {
+          invited_at: string
+          planned_workout_id: number | null
+          responded_at: string | null
+          session_id: number
+          status: string
+          user_id: string
+        }
+        Insert: {
+          invited_at?: string
+          planned_workout_id?: number | null
+          responded_at?: string | null
+          session_id: number
+          status?: string
+          user_id: string
+        }
+        Update: {
+          invited_at?: string
+          planned_workout_id?: number | null
+          responded_at?: string | null
+          session_id?: number
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      shared_sessions: {
+        Row: {
+          created_at: string
+          creator_id: string | null
+          discipline: Database["public"]["Enums"]["discipline"]
+          id: number
+          notes: string | null
+          planned_distance_km: number | null
+          planned_duration_minutes: number | null
+          target_date: string
+          target_zone: Database["public"]["Enums"]["intensity_zone"] | null
+          title: string | null
+        }
+        Insert: {
+          created_at?: string
+          creator_id?: string | null
+          discipline: Database["public"]["Enums"]["discipline"]
+          id?: never
+          notes?: string | null
+          planned_distance_km?: number | null
+          planned_duration_minutes?: number | null
+          target_date: string
+          target_zone?: Database["public"]["Enums"]["intensity_zone"] | null
+          title?: string | null
+        }
+        Update: {
+          created_at?: string
+          creator_id?: string | null
+          discipline?: Database["public"]["Enums"]["discipline"]
+          id?: never
+          notes?: string | null
+          planned_distance_km?: number | null
+          planned_duration_minutes?: number | null
+          target_date?: string
+          target_zone?: Database["public"]["Enums"]["intensity_zone"] | null
+          title?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -287,10 +356,19 @@ export type Database = {
     Functions: {
       block_user: { Args: { p_user_id: string }; Returns: undefined }
       cancel_friend_request: { Args: { p_friendship_id: number }; Returns: undefined }
+      create_shared_session: {
+        Args: { p_friend_ids: string[]; p_planned_workout_id: number }
+        Returns: number
+      }
       find_user: {
         Args: { p_friend_code: string; p_username: string }
         Returns: { relationship: string; user_id: string; username: string }[]
       }
+      invite_to_shared_session: {
+        Args: { p_friend_ids: string[]; p_session_id: number }
+        Returns: undefined
+      }
+      leave_shared_session: { Args: { p_session_id: number }; Returns: undefined }
       list_friendships: {
         Args: never
         Returns: {
@@ -299,6 +377,22 @@ export type Database = {
           kind: string
           other_user_id: string
           username: string
+        }[]
+      }
+      list_session_invites: {
+        Args: never
+        Returns: {
+          creator_username: string
+          discipline: Database["public"]["Enums"]["discipline"]
+          invited_at: string
+          notes: string
+          other_members: string[]
+          planned_distance_km: number
+          planned_duration_minutes: number
+          session_id: number
+          target_date: string
+          target_zone: Database["public"]["Enums"]["intensity_zone"]
+          title: string
         }[]
       }
       pending_counts: {
@@ -310,7 +404,23 @@ export type Database = {
         Args: { p_accept: boolean; p_friendship_id: number }
         Returns: undefined
       }
+      respond_session_invite: {
+        Args: { p_accept: boolean; p_session_id: number }
+        Returns: number
+      }
       send_friend_request: { Args: { p_user_id: string }; Returns: number }
+      shared_session_overview: {
+        Args: { p_session_ids: number[] }
+        Returns: {
+          completed: boolean
+          is_creator: boolean
+          is_me: boolean
+          session_id: number
+          status: string
+          user_id: string
+          username: string
+        }[]
+      }
       unblock_user: { Args: { p_user_id: string }; Returns: undefined }
     }
     Enums: {

@@ -16,6 +16,7 @@ function workout(overrides: Partial<PlannedWorkout> = {}): PlannedWorkout {
     planned_duration_minutes: 45,
     planned_distance_km: null,
     target_zone: "z2",
+    shared_session_id: null,
     ...overrides,
   }
 }

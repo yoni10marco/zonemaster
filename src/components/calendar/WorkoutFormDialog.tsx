@@ -1,12 +1,14 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Copy } from "lucide-react"
 import { toast } from "sonner"
 
+import { useSharedMembers } from "@/components/calendar/SharedSessionsContext"
 import { useZoneRanges } from "@/components/calendar/ZoneRangesContext"
+import { TogetherSection } from "@/components/friends/TogetherSection"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -33,7 +35,13 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import type { PlannedWorkout } from "@/hooks/usePlannedWorkouts"
+import { useFriends } from "@/hooks/useFriends"
 import { usePlannedWorkouts } from "@/hooks/usePlannedWorkouts"
+import {
+  createSharedSession,
+  inviteToSharedSession,
+  leaveSharedSession,
+} from "@/lib/friends/sessions"
 import {
   DISCIPLINES,
   DISCIPLINE_LABELS,
@@ -69,6 +77,8 @@ type WorkoutFormDialogProps = {
   /** Called after a delete so the page can offer "Undo". Without it a plain toast is shown. */
   onDeleted?: (workout: PlannedWorkout) => void
   onDuplicate?: (workout: PlannedWorkout) => void
+  /** Called after invitations were sent or you left a session, so the calendar can reload. */
+  onSharedChanged?: () => void | Promise<void>
 }
 
 export function WorkoutFormDialog({
@@ -80,9 +90,14 @@ export function WorkoutFormDialog({
   mutations,
   onDeleted,
   onDuplicate,
+  onSharedChanged,
 }: WorkoutFormDialogProps) {
   const isEditing = !!workout
   const zoneRanges = useZoneRanges()
+  const { friends } = useFriends()
+  const members = useSharedMembers(workout?.shared_session_id ?? null)
+  const [invitees, setInvitees] = useState<string[]>([])
+  const [sharing, setSharing] = useState(false)
 
   const form = useForm<PlannedWorkoutInput>({
     resolver: zodResolver(plannedWorkoutSchema),
@@ -117,6 +132,9 @@ export function WorkoutFormDialog({
       notes: source?.notes ?? "",
       repeatWeeks: "0",
     })
+    // A fresh dialog starts with nobody picked.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setInvitees([])
   }, [open, workout, prefill, targetDate, form])
 
   function toastWithUndo(message: string, createdIds: number[]) {
@@ -132,6 +150,41 @@ export function WorkoutFormDialog({
         },
       },
     })
+  }
+
+  function chooseInvitees(ids: string[]) {
+    setInvitees(ids)
+    if (ids.length > 0) form.setValue("repeatWeeks", "0")
+  }
+
+  async function sendInvitations() {
+    if (!workout || invitees.length === 0) return
+    setSharing(true)
+    try {
+      if (workout.shared_session_id) await inviteToSharedSession(workout.shared_session_id, invitees)
+      else await createSharedSession(workout.id, invitees)
+      toast.success(invitees.length === 1 ? "Invitation sent" : `${invitees.length} invitations sent`)
+      setInvitees([])
+      await onSharedChanged?.()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't send the invitation")
+    } finally {
+      setSharing(false)
+    }
+  }
+
+  async function leaveSession() {
+    if (!workout?.shared_session_id) return
+    setSharing(true)
+    try {
+      await leaveSharedSession(workout.shared_session_id)
+      toast.success("You left the shared session")
+      await onSharedChanged?.()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't leave the session")
+    } finally {
+      setSharing(false)
+    }
   }
 
   async function onSubmit(values: PlannedWorkoutInput) {
@@ -169,7 +222,23 @@ export function WorkoutFormDialog({
         toastWithUndo(`Added ${created.length} workouts`, created.map((w) => w.id))
       } else {
         const created = await mutations.createWorkout(payload)
-        toastWithUndo("Workout added", [created.id])
+        if (invitees.length > 0) {
+          try {
+            await createSharedSession(created.id, invitees)
+            toastWithUndo(
+              `Workout added, ${invitees.length === 1 ? "1 friend" : `${invitees.length} friends`} invited`,
+              [created.id]
+            )
+            await onSharedChanged?.()
+          } catch (err) {
+            toastWithUndo("Workout added", [created.id])
+            toast.error(
+              `The invitation wasn't sent: ${err instanceof Error ? err.message : "something went wrong"}`
+            )
+          }
+        } else {
+          toastWithUndo("Workout added", [created.id])
+        }
       }
       onOpenChange(false)
     } catch (err) {
@@ -181,7 +250,8 @@ export function WorkoutFormDialog({
     if (!workout) return
     try {
       await mutations.deleteWorkout(workout.id)
-      if (onDeleted) onDeleted(workout)
+      if (workout.shared_session_id) toast.success("Workout deleted, and you left the shared session")
+      else if (onDeleted) onDeleted(workout)
       else toast.success("Workout deleted")
       onOpenChange(false)
     } catch (err) {
@@ -352,7 +422,11 @@ export function WorkoutFormDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Repeat weekly (optional)</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || "0"}>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value || "0"}
+                    disabled={invitees.length > 0 && !isEditing}
+                  >
                     <FormControl>
                       <SelectTrigger className="w-full">
                         <SelectValue />
@@ -370,6 +444,19 @@ export function WorkoutFormDialog({
                   <FormMessage />
                 </FormItem>
               )}
+            />
+
+            <TogetherSection
+              friends={friends
+                .filter((f) => f.kind === "friend")
+                .map((f) => ({ userId: f.userId, username: f.username }))}
+              members={workout?.shared_session_id ? members : undefined}
+              isEditing={isEditing}
+              selected={invitees}
+              onSelectedChange={chooseInvitees}
+              onInvite={isEditing ? sendInvitations : undefined}
+              onLeave={workout?.shared_session_id ? leaveSession : undefined}
+              busy={sharing}
             />
 
             <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-between">

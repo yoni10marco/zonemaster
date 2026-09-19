@@ -2,7 +2,7 @@
 
 ## Next: training with friends
 
-Add friends and plan training together. **Status: slice 1 built and tested (not yet pushed); slices 2 and 3 to do.**
+Add friends and plan training together. **Status: all three slices built and tested. Slices 1 and 2 are pushed; slice 3 is committed locally, not pushed yet.**
 
 ### Progress
 
@@ -11,7 +11,7 @@ Add friends and plan training together. **Status: slice 1 built and tested (not 
   - App: the friend ID card in Settings, the Friends page (find, requests, list, unfriend, block) and the menu badge.
   - Checked with 55 database security tests as different users (all passing, rolled back), 37 new automated tests, and a full click-through against the real database.
   - Known and expected: the Supabase advisor lists the friend functions as "signed-in users can execute a SECURITY DEFINER function". That is the intended API; each function checks the caller and returns only a username and the state of the relationship.
-- **Slice 2: shared sessions.** Built and verified locally (migrations 0011/0012 applied to the live DB; 198 tests pass; real-browser walkthrough done). Not committed or deployed yet, waiting for the owner to try it locally.
+- **Slice 2: shared sessions. Built and pushed** (migrations 0011 and 0012 applied to the live database; real-browser walkthrough done; the invite card hides the inviter from the "With" list).
 - **Slice 3: polish.** Built: "Trained together" card on the dashboard (done / planned together, and who with). Rate limits, unfriend cleanup and empty states were already covered in slices 1 and 2.
 
 ### Decisions (from the product owner)

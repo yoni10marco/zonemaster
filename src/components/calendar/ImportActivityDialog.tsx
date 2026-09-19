@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react"
 import { Loader2, Upload } from "lucide-react"
 import { toast } from "sonner"
 
+import { useZoneGuide } from "@/components/calendar/ZoneGuideContext"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -11,9 +12,10 @@ import { ACCEPTED_EXTENSIONS, parseActivityFile } from "@/lib/import/parse-activ
 import { fetchImportContext, rowsFor, saveImportedRows, type ImportContext } from "@/lib/import/save"
 import { durationMinutes, externalActivityId, intensityText } from "@/lib/import/summary"
 import { ImportError, type ParsedActivity } from "@/lib/import/types"
-import { DISCIPLINES, DISCIPLINE_LABELS, type Discipline } from "@/lib/types/domain"
+import { DISCIPLINES, DISCIPLINE_LABELS, INTENSITY_ZONES, type Discipline } from "@/lib/types/domain"
 import { format } from "@/lib/utils/dates"
 import { formatDistance } from "@/lib/utils/distance"
+import { zoneOfActivity } from "@/lib/utils/training-zones"
 
 type ImportActivityDialogProps = {
   open: boolean
@@ -28,6 +30,7 @@ function errorText(err: unknown, fallback: string): string {
 
 export function ImportActivityDialog({ open, onOpenChange, onImported }: ImportActivityDialogProps) {
   const fileInput = useRef<HTMLInputElement>(null)
+  const zoneGuide = useZoneGuide()
   const [reading, setReading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [activities, setActivities] = useState<ParsedActivity[]>([])
@@ -140,6 +143,7 @@ export function ImportActivityDialog({ open, onOpenChange, onImported }: ImportA
             {rows.map((row) => {
               const plan = plannedTitle(row.plannedId)
               const intensity = intensityText({ ...row.activity, discipline: row.discipline })
+              const zoneCheck = plan?.target_zone ? zoneOfActivity(zoneGuide, row.discipline, row.activity) : null
               const details = [
                 `${durationMinutes(row.activity.durationSeconds)} min`,
                 row.activity.distanceKm ? formatDistance(row.activity.distanceKm, row.discipline) : null,
@@ -178,6 +182,16 @@ export function ImportActivityDialog({ open, onOpenChange, onImported }: ImportA
                         <span className="text-muted-foreground">No matching planned workout, saved as an extra activity.</span>
                       )}
                     </p>
+                    {plan?.target_zone && zoneCheck && !row.duplicate && (
+                      <p className={`text-xs ${zoneCheck.zone === plan.target_zone ? "text-green-700 dark:text-green-400" : "text-amber-700 dark:text-amber-400"}`}>
+                        Planned {plan.target_zone.toUpperCase()}: your average {zoneCheck.measure} was {zoneCheck.zone.toUpperCase()}
+                        {zoneCheck.zone === plan.target_zone
+                          ? ", right on target."
+                          : INTENSITY_ZONES.indexOf(zoneCheck.zone) > INTENSITY_ZONES.indexOf(plan.target_zone)
+                            ? ", harder than planned."
+                            : ", easier than planned."}
+                      </p>
+                    )}
                   </div>
                   <Select
                     value={row.discipline}

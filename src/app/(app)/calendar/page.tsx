@@ -25,7 +25,7 @@ import { TOUCH_DRAG_DELAY_MS, WorkoutCard } from "@/components/calendar/WorkoutC
 import { SharedSessionsProvider } from "@/components/calendar/SharedSessionsContext"
 import { ImportActivityDialog } from "@/components/calendar/ImportActivityDialog"
 import { WorkoutFormDialog } from "@/components/calendar/WorkoutFormDialog"
-import { ZoneRangesProvider } from "@/components/calendar/ZoneRangesContext"
+import { ZoneGuideProvider } from "@/components/calendar/ZoneGuideContext"
 import { usePlannedWorkouts, type PlannedWorkout } from "@/hooks/usePlannedWorkouts"
 import { useCompletedWorkouts, type CompletedWorkout } from "@/hooks/useCompletedWorkouts"
 import { useProfile } from "@/hooks/useProfile"
@@ -106,7 +106,7 @@ export default function CalendarPage() {
     range.end
   )
 
-  const { zoneRanges } = useProfile()
+  const { zoneGuide } = useProfile()
 
   const workoutsByDate = useMemo(() => {
     const map = new Map<string, PlannedWorkout[]>()
@@ -304,7 +304,7 @@ export default function CalendarPage() {
   const activeWorkout = workouts.find((w) => w.id === activeDragId) ?? null
 
   return (
-    <ZoneRangesProvider value={zoneRanges}>
+    <ZoneGuideProvider value={zoneGuide}>
       <SharedSessionsProvider value={sharedMembers}>
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -417,6 +417,6 @@ export default function CalendarPage() {
         )}
       </div>
       </SharedSessionsProvider>
-    </ZoneRangesProvider>
+    </ZoneGuideProvider>
   )
 }

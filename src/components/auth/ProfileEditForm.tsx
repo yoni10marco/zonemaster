@@ -9,10 +9,12 @@ import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
+import { PowerPaceFields } from "@/components/auth/PowerPaceFields"
 import { ProfileFields } from "@/components/auth/ProfileFields"
 import { createClient } from "@/lib/supabase/client"
 import { ZONE_LABELS, INTENSITY_ZONES } from "@/lib/types/domain"
 import { profileSchema, type ProfileInput } from "@/lib/validation/profile"
+import { formatPace, parsePace } from "@/lib/utils/training-zones"
 import { computeZoneRanges, formatZoneRange } from "@/lib/utils/zones"
 
 export function ProfileEditForm() {
@@ -28,6 +30,9 @@ export function ProfileEditForm() {
       targetRaceDistance: "",
       maxHeartRate: "",
       restingHeartRate: "",
+      ftpWatts: "",
+      runThresholdPace: "",
+      swimCss: "",
     },
   })
 
@@ -54,7 +59,7 @@ export function ProfileEditForm() {
       const { data } = await supabase
         .from("profiles")
         .select(
-          "fitness_level, primary_discipline, target_race_date, target_race_distance, max_heart_rate, resting_heart_rate"
+          "fitness_level, primary_discipline, target_race_date, target_race_distance, max_heart_rate, resting_heart_rate, ftp_watts, run_threshold_pace_sec, swim_css_sec"
         )
         .eq("id", user.id)
         .single()
@@ -67,6 +72,9 @@ export function ProfileEditForm() {
           targetRaceDistance: data.target_race_distance ?? "",
           maxHeartRate: data.max_heart_rate?.toString() ?? "",
           restingHeartRate: data.resting_heart_rate?.toString() ?? "",
+          ftpWatts: data.ftp_watts?.toString() ?? "",
+          runThresholdPace: data.run_threshold_pace_sec ? formatPace(data.run_threshold_pace_sec) : "",
+          swimCss: data.swim_css_sec ? formatPace(data.swim_css_sec) : "",
         })
         setLoading(false)
       }
@@ -96,6 +104,9 @@ export function ProfileEditForm() {
         target_race_distance: values.targetRaceDistance || null,
         max_heart_rate: values.maxHeartRate ? Number(values.maxHeartRate) : null,
         resting_heart_rate: values.restingHeartRate ? Number(values.restingHeartRate) : null,
+        ftp_watts: values.ftpWatts ? Number(values.ftpWatts) : null,
+        run_threshold_pace_sec: values.runThresholdPace ? parsePace(values.runThresholdPace) : null,
+        swim_css_sec: values.swimCss ? parsePace(values.swimCss) : null,
       })
       .eq("id", user.id)
 
@@ -173,6 +184,8 @@ export function ProfileEditForm() {
             </dl>
           )}
         </div>
+
+        <PowerPaceFields control={form.control} />
 
         <Button type="submit" disabled={submitting}>
           {submitting ? "Saving..." : "Save changes"}

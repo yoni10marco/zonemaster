@@ -1,4 +1,4 @@
-import type { Discipline } from "@/lib/types/domain"
+import type { Discipline, IntensityZone } from "@/lib/types/domain"
 import { activityDate, durationMinutes, externalActivityId } from "@/lib/import/summary"
 import type { ParsedActivity } from "@/lib/import/types"
 
@@ -9,6 +9,7 @@ export type PlannedCandidate = {
   title: string | null
   discipline: Discipline
   planned_duration_minutes: number | null
+  target_zone: IntensityZone | null
 }
 
 export type ImportRow = {

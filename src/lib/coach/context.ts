@@ -2,8 +2,8 @@ import { addDays, differenceInCalendarWeeks, format, parseISO } from "date-fns"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 import type { Database, Tables } from "@/lib/types/database.types"
-import { DISCIPLINES, DISCIPLINE_LABELS, INTENSITY_ZONES } from "@/lib/types/domain"
-import { computeZoneRanges, formatZoneRange } from "@/lib/utils/zones"
+import { DISCIPLINES, DISCIPLINE_LABELS } from "@/lib/types/domain"
+import { buildZoneGuide, describeZonesForCoach } from "@/lib/utils/training-zones"
 import { toISODate } from "@/lib/utils/dates"
 import { formatDistance } from "@/lib/utils/distance"
 
@@ -71,7 +71,7 @@ export async function buildTrainingContext(
     supabase
       .from("profiles")
       .select(
-        "fitness_level, primary_discipline, target_race_date, target_race_distance, max_heart_rate, resting_heart_rate"
+        "fitness_level, primary_discipline, target_race_date, target_race_distance, max_heart_rate, resting_heart_rate, ftp_watts, run_threshold_pace_sec, swim_css_sec"
       )
       .eq("id", userId)
       .maybeSingle(),
@@ -114,12 +114,7 @@ export async function buildTrainingContext(
     lines.push(
       `Athlete: ${profile.fitness_level} level, primary discipline ${DISCIPLINE_LABELS[profile.primary_discipline]}, goal: ${goal}.`
     )
-    const zones = computeZoneRanges(profile.max_heart_rate, profile.resting_heart_rate)
-    if (zones) {
-      lines.push(
-        `Heart-rate zones: ${INTENSITY_ZONES.map((z) => `${z.toUpperCase()} ${formatZoneRange(zones[z])}`).join(", ")}.`
-      )
-    }
+    lines.push(...describeZonesForCoach(buildZoneGuide(profile)))
   }
 
   lines.push("")

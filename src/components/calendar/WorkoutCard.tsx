@@ -8,11 +8,11 @@ import type { PlannedWorkout } from "@/hooks/usePlannedWorkouts"
 import { DISCIPLINE_LABELS, ZONE_LABELS } from "@/lib/types/domain"
 import { DISCIPLINE_ICONS, DISCIPLINE_STYLES } from "@/lib/utils/discipline-style"
 import { useSharedMembers } from "@/components/calendar/SharedSessionsContext"
-import { useZoneRanges } from "@/components/calendar/ZoneRangesContext"
+import { useZoneGuide } from "@/components/calendar/ZoneGuideContext"
 import { describeOthers, summarizeSession } from "@/lib/friends/shared-session"
 import { cn } from "@/lib/utils"
 import { formatDistance } from "@/lib/utils/distance"
-import { formatZoneRange } from "@/lib/utils/zones"
+import { zoneTarget } from "@/lib/utils/training-zones"
 
 type WorkoutCardProps = {
   workout: PlannedWorkout
@@ -65,7 +65,8 @@ export function WorkoutCard({
   })
 
   const pointerDownPos = useRef<{ x: number; y: number; time: number } | null>(null)
-  const zoneRanges = useZoneRanges()
+  const zoneGuide = useZoneGuide()
+  const zoneText = workout.target_zone ? zoneTarget(zoneGuide, workout.discipline, workout.target_zone) : null
   const isShared = workout.shared_session_id !== null
   const sharedMembers = useSharedMembers(workout.shared_session_id)
   const shared = sharedMembers ? summarizeSession(sharedMembers) : null
@@ -191,10 +192,8 @@ export function WorkoutCard({
           {workout.target_zone && (
             <div className="mt-0.5 text-muted-foreground">
               {ZONE_LABELS[workout.target_zone]}
-              {zoneRanges && (
-                <span className="block text-[11px] tabular-nums">
-                  {formatZoneRange(zoneRanges[workout.target_zone])}
-                </span>
+              {zoneText && (
+                <span className="block text-[11px] tabular-nums">{zoneText}</span>
               )}
             </div>
           )}

@@ -18,7 +18,7 @@ export async function fetchImportContext(activities: ParsedActivity[], externalI
 
   const { data: planned, error } = await supabase
     .from("planned_workouts")
-    .select("id, target_date, title, discipline, planned_duration_minutes")
+    .select("id, target_date, title, discipline, planned_duration_minutes, target_zone")
     .gte("target_date", dates[0])
     .lte("target_date", dates[dates.length - 1])
   if (error) throw new Error(error.message)

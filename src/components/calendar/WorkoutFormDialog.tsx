@@ -7,7 +7,7 @@ import { Copy } from "lucide-react"
 import { toast } from "sonner"
 
 import { useSharedMembers } from "@/components/calendar/SharedSessionsContext"
-import { useZoneRanges } from "@/components/calendar/ZoneRangesContext"
+import { useZoneGuide } from "@/components/calendar/ZoneGuideContext"
 import { TogetherSection } from "@/components/friends/TogetherSection"
 import { Button } from "@/components/ui/button"
 import {
@@ -48,6 +48,7 @@ import {
   INTENSITY_ZONES,
   ZONE_LABELS,
   type Discipline,
+  type IntensityZone,
 } from "@/lib/types/domain"
 import {
   displayValueToKm,
@@ -56,7 +57,7 @@ import {
   usesMeters,
 } from "@/lib/utils/distance"
 import { REPEAT_WEEK_OPTIONS, repeatDates } from "@/lib/utils/repeat"
-import { formatZoneRange } from "@/lib/utils/zones"
+import { zoneTarget } from "@/lib/utils/training-zones"
 import {
   parseOptionalNumber,
   plannedWorkoutSchema,
@@ -93,7 +94,7 @@ export function WorkoutFormDialog({
   onSharedChanged,
 }: WorkoutFormDialogProps) {
   const isEditing = !!workout
-  const zoneRanges = useZoneRanges()
+  const zoneGuide = useZoneGuide()
   const { friends } = useFriends()
   const members = useSharedMembers(workout?.shared_session_id ?? null)
   const [invitees, setInvitees] = useState<string[]>([])
@@ -115,6 +116,10 @@ export function WorkoutFormDialog({
 
   // The distance field holds what is shown: meters for swims, km otherwise.
   const discipline = useWatch({ control: form.control, name: "discipline" }) as Discipline
+  const zoneSuffix = (z: IntensityZone) => {
+    const target = zoneTarget(zoneGuide, discipline, z)
+    return target ? ` · ${target}` : ""
+  }
 
   useEffect(() => {
     if (!open) return
@@ -378,7 +383,7 @@ export function WorkoutFormDialog({
                       {INTENSITY_ZONES.map((z) => (
                         <SelectItem key={z} value={z}>
                           {ZONE_LABELS[z]}
-                          {zoneRanges ? ` · ${formatZoneRange(zoneRanges[z])}` : ""}
+                          {zoneSuffix(z)}
                         </SelectItem>
                       ))}
                     </SelectContent>

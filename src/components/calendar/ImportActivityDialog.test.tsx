@@ -4,7 +4,9 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ImportActivityDialog } from "@/components/calendar/ImportActivityDialog"
+import { ZoneGuideProvider } from "@/components/calendar/ZoneGuideContext"
 import type { ImportContext } from "@/lib/import/save"
+import { buildZoneGuide } from "@/lib/utils/training-zones"
 
 const toastSuccess = vi.fn()
 const toastError = vi.fn()
@@ -29,7 +31,7 @@ const TCX = `<TrainingCenterDatabase><Activities><Activity Sport="Running"><Id>2
   <AverageHeartRateBpm><Value>148</Value></AverageHeartRateBpm></Lap></Activity></Activities></TrainingCenterDatabase>`
 
 const context = (over: Partial<ImportContext> = {}): ImportContext => ({
-  planned: [{ id: 7, target_date: "2026-09-19", title: "Easy run", discipline: "run", planned_duration_minutes: 30 }],
+  planned: [{ id: 7, target_date: "2026-09-19", title: "Easy run", discipline: "run", planned_duration_minutes: 30, target_zone: "z2" }],
   completedPlannedIds: new Set(),
   existingExternalIds: new Set(),
   ...over,
@@ -111,5 +113,41 @@ describe("ImportActivityDialog", () => {
     await waitFor(() => expect(toastError).toHaveBeenCalledWith("duplicate key value"))
     expect(onImported).not.toHaveBeenCalled()
     expect(screen.getByRole("button", { name: "Import 1 activity" })).toBeEnabled()
+  })
+})
+
+describe("ImportActivityDialog: checking the planned zone", () => {
+  const setupWithZones = (input: Parameters<typeof buildZoneGuide>[0]) => {
+    const onImported = vi.fn(async () => {})
+    render(
+      <ZoneGuideProvider value={buildZoneGuide(input)}>
+        <ImportActivityDialog open onOpenChange={vi.fn()} onImported={onImported} />
+      </ZoneGuideProvider>
+    )
+    const user = userEvent.setup({ applyAccept: false })
+    return { choose: (...files: File[]) => user.upload(screen.getByLabelText("Activity files"), files) }
+  }
+
+  it("says the run was easier than planned when its average pace is in a lower zone", async () => {
+    // 5 km in 30 min is 6:00 /km. With a 5:00 threshold that is Z2, so make the plan Z4.
+    fetchImportContext.mockResolvedValue(context({ planned: [{ id: 7, target_date: "2026-09-19", title: "Tempo", discipline: "run", planned_duration_minutes: 30, target_zone: "z4" }] }))
+    const { choose } = setupWithZones({ run_threshold_pace_sec: 300 })
+    await choose(new File([TCX], "morning.tcx"))
+    expect(await screen.findByText(/Planned Z4: your average pace was Z2, easier than planned\./)).toBeInTheDocument()
+  })
+
+  it("says so when the zone matches, using heart rate when there is no pace setup", async () => {
+    // Average 148 bpm with max 190 is Z3 (133-152); the plan is Z3.
+    fetchImportContext.mockResolvedValue(context({ planned: [{ id: 7, target_date: "2026-09-19", title: "Tempo", discipline: "run", planned_duration_minutes: 30, target_zone: "z3" }] }))
+    const { choose } = setupWithZones({ max_heart_rate: 190 })
+    await choose(new File([TCX], "morning.tcx"))
+    expect(await screen.findByText(/Planned Z3: your average heart rate was Z3, right on target\./)).toBeInTheDocument()
+  })
+
+  it("stays quiet without zone numbers", async () => {
+    const { choose } = setup()
+    await choose(new File([TCX], "morning.tcx"))
+    await screen.findByText(/Completes your planned run/)
+    expect(screen.queryByText(/your average/)).not.toBeInTheDocument()
   })
 })

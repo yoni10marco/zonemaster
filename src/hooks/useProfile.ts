@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { createClient } from "@/lib/supabase/client"
 import type { Tables } from "@/lib/types/database.types"
-import { computeZoneRanges } from "@/lib/utils/zones"
+import { buildZoneGuide } from "@/lib/utils/training-zones"
 
 export type Profile = Pick<
   Tables<"profiles">,
@@ -13,13 +13,16 @@ export type Profile = Pick<
   | "target_race_date"
   | "target_race_distance"
   | "max_heart_rate"
+  | "ftp_watts"
+  | "run_threshold_pace_sec"
+  | "swim_css_sec"
   | "resting_heart_rate"
   | "username"
   | "friend_code"
 >
 
 const PROFILE_COLUMNS =
-  "fitness_level, primary_discipline, target_race_date, target_race_distance, max_heart_rate, resting_heart_rate, username, friend_code"
+  "fitness_level, primary_discipline, target_race_date, target_race_distance, max_heart_rate, resting_heart_rate, ftp_watts, run_threshold_pace_sec, swim_css_sec, username, friend_code"
 
 export function useProfile() {
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -45,10 +48,7 @@ export function useProfile() {
     refetch()
   }, [refetch])
 
-  const zoneRanges = useMemo(
-    () => computeZoneRanges(profile?.max_heart_rate, profile?.resting_heart_rate),
-    [profile?.max_heart_rate, profile?.resting_heart_rate]
-  )
+  const zoneGuide = useMemo(() => buildZoneGuide(profile), [profile])
 
-  return { profile, zoneRanges, loading, refetch }
+  return { profile, zoneGuide, loading, refetch }
 }

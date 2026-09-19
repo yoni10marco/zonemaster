@@ -6,10 +6,10 @@ import { describe, expect, it, vi } from "vitest"
 
 import { WorkoutCard } from "@/components/calendar/WorkoutCard"
 import { SharedSessionsProvider } from "@/components/calendar/SharedSessionsContext"
-import { ZoneRangesProvider } from "@/components/calendar/ZoneRangesContext"
+import { ZoneGuideProvider } from "@/components/calendar/ZoneGuideContext"
 import type { PlannedWorkout } from "@/hooks/usePlannedWorkouts"
 import type { SessionMember } from "@/lib/friends/shared-session"
-import { computeZoneRanges } from "@/lib/utils/zones"
+import { buildZoneGuide, type ZoneGuideInput } from "@/lib/utils/training-zones"
 
 function workout(overrides: Partial<PlannedWorkout> = {}): PlannedWorkout {
   return {
@@ -29,14 +29,18 @@ function workout(overrides: Partial<PlannedWorkout> = {}): PlannedWorkout {
   }
 }
 
-function renderCard(props: Partial<React.ComponentProps<typeof WorkoutCard>> = {}, zones = false) {
+function renderCard(props: Partial<React.ComponentProps<typeof WorkoutCard>> = {}, zones: boolean | ZoneGuideInput = false) {
   const card = (
     <DndContext>
       <WorkoutCard workout={workout()} {...props} />
     </DndContext>
   )
   return render(
-    zones ? <ZoneRangesProvider value={computeZoneRanges(190)}>{card}</ZoneRangesProvider> : card
+    zones ? (
+      <ZoneGuideProvider value={buildZoneGuide(zones === true ? { max_heart_rate: 190 } : zones)}>{card}</ZoneGuideProvider>
+    ) : (
+      card
+    )
   )
 }
 
@@ -55,6 +59,20 @@ describe("WorkoutCard", () => {
   it("shows the heart-rate range for the target zone once zones are known", () => {
     renderCard({}, true)
     expect(screen.getByText(/Z2 · Endurance/)).toBeInTheDocument()
+    expect(screen.getByText("114–133 bpm")).toBeInTheDocument()
+  })
+
+  it("shows pace for a run and watts for a ride once those are set up", () => {
+    const { unmount } = renderCard({}, { max_heart_rate: 190, run_threshold_pace_sec: 300 })
+    expect(screen.getByText("5:42–6:27 /km")).toBeInTheDocument()
+    expect(screen.queryByText(/bpm/)).not.toBeInTheDocument()
+    unmount()
+    renderCard({ workout: workout({ discipline: "bike", planned_distance_km: 40 }) }, { max_heart_rate: 190, ftp_watts: 250 })
+    expect(screen.getByText("138–188 W")).toBeInTheDocument()
+  })
+
+  it("keeps showing heart rate for a sport without its own number", () => {
+    renderCard({ workout: workout({ discipline: "bike" }) }, { max_heart_rate: 190, run_threshold_pace_sec: 300 })
     expect(screen.getByText("114–133 bpm")).toBeInTheDocument()
   })
 

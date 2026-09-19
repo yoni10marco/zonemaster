@@ -189,10 +189,10 @@ describe("parseActivityFile", () => {
 
 describe("matching activities to the plan", () => {
   const planned: PlannedCandidate[] = [
-    { id: 1, target_date: "2026-09-19", title: "Easy run", discipline: "run", planned_duration_minutes: 30 },
-    { id: 2, target_date: "2026-09-19", title: "Long run", discipline: "run", planned_duration_minutes: 90 },
-    { id: 3, target_date: "2026-09-19", title: "Swim", discipline: "swim", planned_duration_minutes: 45 },
-    { id: 4, target_date: "2026-09-20", title: "Run tomorrow", discipline: "run", planned_duration_minutes: 60 },
+    { id: 1, target_date: "2026-09-19", title: "Easy run", discipline: "run", planned_duration_minutes: 30, target_zone: null },
+    { id: 2, target_date: "2026-09-19", title: "Long run", discipline: "run", planned_duration_minutes: 90, target_zone: null },
+    { id: 3, target_date: "2026-09-19", title: "Swim", discipline: "swim", planned_duration_minutes: 45, target_zone: null },
+    { id: 4, target_date: "2026-09-20", title: "Run tomorrow", discipline: "run", planned_duration_minutes: 60, target_zone: null },
   ]
 
   it("takes the same-day, same-discipline workout closest in duration", () => {

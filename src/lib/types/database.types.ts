@@ -248,6 +248,9 @@ export type Database = {
           max_heart_rate: number | null
           primary_discipline: Database["public"]["Enums"]["discipline"]
           resting_heart_rate: number | null
+          ftp_watts: number | null
+          run_threshold_pace_sec: number | null
+          swim_css_sec: number | null
           target_race_date: string | null
           target_race_distance: string | null
           updated_at: string
@@ -262,6 +265,9 @@ export type Database = {
           max_heart_rate?: number | null
           primary_discipline?: Database["public"]["Enums"]["discipline"]
           resting_heart_rate?: number | null
+          ftp_watts?: number | null
+          run_threshold_pace_sec?: number | null
+          swim_css_sec?: number | null
           target_race_date?: string | null
           target_race_distance?: string | null
           updated_at?: string
@@ -276,6 +282,9 @@ export type Database = {
           max_heart_rate?: number | null
           primary_discipline?: Database["public"]["Enums"]["discipline"]
           resting_heart_rate?: number | null
+          ftp_watts?: number | null
+          run_threshold_pace_sec?: number | null
+          swim_css_sec?: number | null
           target_race_date?: string | null
           target_race_distance?: string | null
           updated_at?: string

@@ -15,7 +15,7 @@ import { DISCIPLINE_LABELS, ZONE_LABELS } from "@/lib/types/domain"
 import { cn } from "@/lib/utils"
 import { toISODate, weekRange } from "@/lib/utils/dates"
 import { formatDistance } from "@/lib/utils/distance"
-import { formatZoneRange } from "@/lib/utils/zones"
+import { zoneTarget } from "@/lib/utils/training-zones"
 import { DISCIPLINE_ICONS, DISCIPLINE_STYLES } from "@/lib/utils/discipline-style"
 
 type WeekChoice = "this" | "next"
@@ -35,7 +35,7 @@ export function PlanWeekPanel() {
   const [busyKey, setBusyKey] = useState<string | null>(null)
   const [addedCount, setAddedCount] = useState(0)
   const [feedback, setFeedback] = useState("")
-  const { zoneRanges } = useProfile()
+  const { zoneGuide } = useProfile()
 
   // `revise` = the athlete asked for changes to the drafts currently on screen.
   async function generate(revise?: string) {
@@ -208,12 +208,11 @@ export function PlanWeekPanel() {
             const d = item.draft
             const style = DISCIPLINE_STYLES[d.discipline]
             const Icon = DISCIPLINE_ICONS[d.discipline]
+            const zoneText = d.zone ? zoneTarget(zoneGuide, d.discipline, d.zone) : null
             const details = [
               d.durationMinutes ? `${d.durationMinutes} min` : null,
               d.distanceKm ? formatDistance(d.distanceKm, d.discipline) : null,
-              d.zone
-                ? `${ZONE_LABELS[d.zone]}${zoneRanges ? ` (${formatZoneRange(zoneRanges[d.zone])})` : ""}`
-                : null,
+              d.zone ? `${ZONE_LABELS[d.zone]}${zoneText ? ` (${zoneText})` : ""}` : null,
             ].filter(Boolean)
 
             return (

@@ -78,6 +78,6 @@ Add friends and plan training together. **Status: all three slices built and tes
 
 ## Ideas parked for later
 
-- Pace and power zones (heart-rate zones are done).
+- Pace and power zones: built (bike FTP, run threshold pace and swim CSS in Settings; shown on cards, in the workout form, the import preview and the coach).
 - A "forgot password" flow.
 - Automatic activity import. File import (.fit, .tcx, .gpx via the Import button on the calendar) is built; automatic sync is not (Strava is not viable: paid API access, and its terms forbid AI use; Intervals.icu is the researched alternative).

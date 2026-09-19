@@ -13,7 +13,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core"
 import { subWeeks } from "date-fns"
-import { CalendarX2, CopyPlus, Loader2 } from "lucide-react"
+import { CalendarX2, CopyPlus, Loader2, Upload } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -23,6 +23,7 @@ import { WeekView } from "@/components/calendar/WeekView"
 import { MonthView } from "@/components/calendar/MonthView"
 import { TOUCH_DRAG_DELAY_MS, WorkoutCard } from "@/components/calendar/WorkoutCard"
 import { SharedSessionsProvider } from "@/components/calendar/SharedSessionsContext"
+import { ImportActivityDialog } from "@/components/calendar/ImportActivityDialog"
 import { WorkoutFormDialog } from "@/components/calendar/WorkoutFormDialog"
 import { ZoneRangesProvider } from "@/components/calendar/ZoneRangesContext"
 import { usePlannedWorkouts, type PlannedWorkout } from "@/hooks/usePlannedWorkouts"
@@ -62,6 +63,7 @@ export default function CalendarPage() {
   const [anchor, setAnchor] = useState(new Date())
   const [activeDragId, setActiveDragId] = useState<number | null>(null)
   const [copying, setCopying] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
 
   // Mouse: drag after moving a few pixels, so a plain click still opens the
   // card. Touch: drag only after a short press-and-hold, otherwise the
@@ -99,7 +101,7 @@ export default function CalendarPage() {
     rescheduleWorkout,
   } = usePlannedWorkouts(range.start, range.end)
 
-  const { completions, logCompletion, relinkCompletion, deleteCompletion } = useCompletedWorkouts(
+  const { completions, logCompletion, relinkCompletion, deleteCompletion, refetch: refetchCompletions } = useCompletedWorkouts(
     range.start,
     range.end
   )
@@ -323,6 +325,10 @@ export default function CalendarPage() {
             </Button>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+              <Upload />
+              Import
+            </Button>
             {view === "week" && (
               <Button variant="outline" size="sm" onClick={handleCopyLastWeek} disabled={copying || loading}>
                 {copying ? <Loader2 className="animate-spin" /> : <CopyPlus />}
@@ -390,6 +396,8 @@ export default function CalendarPage() {
             {view === "week" ? ", or copy last week's plan." : "."}
           </div>
         )}
+
+        <ImportActivityDialog open={importOpen} onOpenChange={setImportOpen} onImported={refetchCompletions} />
 
         {dialogState && (
           <WorkoutFormDialog

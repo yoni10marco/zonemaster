@@ -427,7 +427,7 @@ export type Database = {
       discipline: "swim" | "bike" | "run" | "strength" | "other"
       fitness_level: "beginner" | "intermediate" | "advanced"
       intensity_zone: "z1" | "z2" | "z3" | "z4" | "z5"
-      workout_source: "manual" | "strava"
+      workout_source: "manual" | "strava" | "file"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -558,7 +558,7 @@ export const Constants = {
       discipline: ["swim", "bike", "run", "strength", "other"],
       fitness_level: ["beginner", "intermediate", "advanced"],
       intensity_zone: ["z1", "z2", "z3", "z4", "z5"],
-      workout_source: ["manual", "strava"],
+      workout_source: ["manual", "strava", "file"],
     },
   },
 } as const

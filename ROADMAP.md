@@ -80,4 +80,4 @@ Add friends and plan training together. **Status: all three slices built and tes
 
 - Pace and power zones (heart-rate zones are done).
 - A "forgot password" flow.
-- Automatic activity import (Strava is not viable: paid API access, and its terms forbid AI use; Intervals.icu or FIT/TCX file upload are the researched alternatives).
+- Automatic activity import. File import (.fit, .tcx, .gpx via the Import button on the calendar) is built; automatic sync is not (Strava is not viable: paid API access, and its terms forbid AI use; Intervals.icu is the researched alternative).

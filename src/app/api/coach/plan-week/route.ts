@@ -8,15 +8,41 @@ import { PLAN_RESPONSE_SCHEMA, parsePlan } from "@/lib/coach/plan"
 import { COACH_HOURLY_LIMIT, coachSystemPrompt, isRateLimited } from "@/lib/coach/prompt"
 import { createClient } from "@/lib/supabase/server"
 import { toISODate } from "@/lib/utils/dates"
+import { DISCIPLINES, INTENSITY_ZONES } from "@/lib/types/domain"
 
 export const maxDuration = 60
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+
+// A draft the coach proposed earlier, sent back when the athlete asks for changes.
+const previousDraftSchema = z.object({
+  date: isoDate,
+  discipline: z.enum(DISCIPLINES),
+  durationMinutes: z.number().nullish(),
+  distanceKm: z.number().nullish(),
+  zone: z.enum(INTENSITY_ZONES).nullish(),
+  title: z.string().max(120),
+})
+
 const bodySchema = z.object({
   weekStart: isoDate,
   today: isoDate,
   focus: z.string().trim().max(300).optional(),
+  feedback: z.string().trim().max(500).optional(),
+  previous: z.array(previousDraftSchema).max(14).optional(),
 })
+
+function describePrevious(drafts: z.infer<typeof previousDraftSchema>[]): string {
+  return drafts
+    .map((d) => {
+      const parts = [d.date, d.discipline]
+      if (d.durationMinutes) parts.push(`${d.durationMinutes} min`)
+      if (d.distanceKm) parts.push(`${d.distanceKm} km`)
+      if (d.zone) parts.push(d.zone.toUpperCase())
+      return `- ${parts.join(", ")}: ${d.title.replace(/\s+/g, " ")}`
+    })
+    .join("\n")
+}
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
@@ -27,7 +53,7 @@ export async function POST(request: NextRequest) {
 
   const body = bodySchema.safeParse(await request.json().catch(() => null))
   if (!body.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 })
-  const { weekStart, today, focus } = body.data
+  const { weekStart, today, focus, feedback, previous } = body.data
 
   if (Number.isNaN(parseISO(weekStart).getTime())) {
     return NextResponse.json({ error: "Invalid week" }, { status: 400 })
@@ -46,10 +72,11 @@ export async function POST(request: NextRequest) {
     user_id: user.id,
     role: "system",
     content: "plan_week requested",
-    metadata: { kind: "plan_week", weekStart },
+    metadata: { kind: "plan_week", weekStart, revision: !!feedback },
   })
 
   const weekEnd = toISODate(addDays(parseISO(weekStart), 6))
+  const isRevision = !!feedback && !!previous && previous.length > 0
 
   try {
     const context = await buildTrainingContext(supabase, user.id, today)
@@ -65,6 +92,9 @@ export async function POST(request: NextRequest) {
             "give each workout a durationMinutes and/or distanceKm (always kilometers, also for swims: a 1500 m swim is 1.5); use zones z1 to z5 for intensity; keep a sensible mix and at least one rest day;",
             "do not repeat sessions that are already planned in that week (see the athlete data), add complementary ones instead.",
             focus ? `The athlete's focus for this week: ${focus}` : "",
+            isRevision
+              ? `\nYou proposed this plan earlier:\n${describePrevious(previous!)}\n\nThe athlete asks for a change: "${feedback}"\nReturn a complete revised plan for the same week that applies EVERY part of this request (for example, if asked to add a session on a day, that session must be in the new plan; if asked to shorten something, shorten it) and keeps what already works.`
+              : "",
           ]
             .filter(Boolean)
             .join(" "),
@@ -73,6 +103,8 @@ export async function POST(request: NextRequest) {
       responseSchema: PLAN_RESPONSE_SCHEMA,
       maxOutputTokens: 8192,
       temperature: 0.6,
+      // A structured weekly plan needs little deep reasoning; "low" answers far sooner.
+      thinkingLevel: "low",
     })
 
     return NextResponse.json(parsePlan(text, weekStart))

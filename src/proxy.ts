@@ -11,9 +11,9 @@ export const config = {
     /*
      * Match all request paths except:
      * - _next/static, _next/image (Next.js internals)
-     * - favicon.ico
+     * - favicon.ico, manifest.webmanifest (fetched by the browser before login)
      * - image/font/svg assets
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest\\.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 }

@@ -1,18 +1,24 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { subDays, subWeeks } from "date-fns"
 
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ActivityListDialog } from "@/components/dashboard/ActivityListDialog"
 import { DisciplineCards } from "@/components/dashboard/DisciplineCards"
+import { ProgressSection } from "@/components/dashboard/ProgressSection"
 import { SessionCompletionCard } from "@/components/dashboard/SessionCompletionCard"
 import { usePlannedWorkouts } from "@/hooks/usePlannedWorkouts"
 import { useCompletedWorkouts } from "@/hooks/useCompletedWorkouts"
+import { useProfile } from "@/hooks/useProfile"
 import type { Discipline } from "@/lib/types/domain"
 import { format, monthRange, nextAnchor, prevAnchor, weekRange } from "@/lib/utils/dates"
+import { raceCountdown, weekStreak, weeklyTrend } from "@/lib/utils/progress"
 import { activityCounts, sessionCompletion } from "@/lib/utils/volume"
+
+const TREND_WEEKS = 8
 
 type Period = "week" | "month" | "all"
 
@@ -40,6 +46,24 @@ export default function DashboardPage() {
   const counts = useMemo(() => activityCounts(completions), [completions])
 
   const loading = loadingPlanned || loadingCompleted
+
+  // Progress panel: fixed windows independent of the period selector above.
+  const today = useMemo(() => new Date(), [])
+  const trendStart = useMemo(() => subWeeks(weekRange(today).start, TREND_WEEKS - 1), [today])
+  const { workouts: trendPlanned } = usePlannedWorkouts(trendStart, weekRange(today).end)
+  // Through the end of this week, not just today: a workout ticked off ahead of
+  // time is dated later in the week and must still count.
+  const { completions: yearCompletions } = useCompletedWorkouts(subDays(today, 400), weekRange(today).end)
+  const { profile } = useProfile()
+
+  const progress = useMemo(() => {
+    const completedDates = yearCompletions.map((c) => c.execution_date)
+    return {
+      weeks: weeklyTrend(trendPlanned.map((w) => w.target_date), completedDates, TREND_WEEKS, today),
+      streak: weekStreak(completedDates, today),
+      race: raceCountdown(profile?.target_race_date, today),
+    }
+  }, [trendPlanned, yearCompletions, profile?.target_race_date, today])
 
   return (
     <div className="space-y-6">
@@ -85,6 +109,13 @@ export default function DashboardPage() {
             periodLabel={period === "all" ? "All-time" : period === "week" ? "This week's" : "This month's"}
           />
           <DisciplineCards counts={counts} onSelect={setSelectedDiscipline} />
+          <ProgressSection
+            race={progress.race}
+            raceDate={profile?.target_race_date ?? null}
+            raceDistance={profile?.target_race_distance ?? null}
+            streak={progress.streak}
+            weeks={progress.weeks}
+          />
         </>
       )}
 

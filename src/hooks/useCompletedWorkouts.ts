@@ -62,6 +62,22 @@ export function useCompletedWorkouts(rangeStart: Date | null, rangeEnd: Date | n
     return data
   }
 
+  // Point an existing completion at a (re-created) planned workout — used when
+  // undoing the deletion of a workout that was already marked done.
+  async function relinkCompletion(id: number, plannedWorkoutId: number) {
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from("completed_workouts")
+      .update({ planned_workout_id: plannedWorkoutId })
+      .eq("id", id)
+      .select()
+      .single()
+
+    if (error) throw new Error(error.message)
+    setCompletions((prev) => prev.map((c) => (c.id === id ? data : c)))
+    return data
+  }
+
   async function deleteCompletion(id: number) {
     const supabase = createClient()
     const { error } = await supabase.from("completed_workouts").delete().eq("id", id)
@@ -75,6 +91,7 @@ export function useCompletedWorkouts(rangeStart: Date | null, rangeEnd: Date | n
     error,
     refetch,
     logCompletion,
+    relinkCompletion,
     deleteCompletion,
   }
 }

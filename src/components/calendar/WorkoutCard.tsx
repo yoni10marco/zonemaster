@@ -7,8 +7,10 @@ import { Check, CheckCircle2 } from "lucide-react"
 import type { PlannedWorkout } from "@/hooks/usePlannedWorkouts"
 import { DISCIPLINE_LABELS, ZONE_LABELS } from "@/lib/types/domain"
 import { DISCIPLINE_ICONS, DISCIPLINE_STYLES } from "@/lib/utils/discipline-style"
+import { useZoneRanges } from "@/components/calendar/ZoneRangesContext"
 import { cn } from "@/lib/utils"
 import { formatDistance } from "@/lib/utils/distance"
+import { formatZoneRange } from "@/lib/utils/zones"
 
 type WorkoutCardProps = {
   workout: PlannedWorkout
@@ -51,10 +53,17 @@ export function WorkoutCard({
 }: WorkoutCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `workout-${workout.id}`,
-    data: { workoutId: workout.id },
+    // `label` is read aloud by screen readers during keyboard dragging.
+    data: {
+      workoutId: workout.id,
+      label: workout.title
+        ? `${DISCIPLINE_LABELS[workout.discipline]} workout "${workout.title}"`
+        : `${DISCIPLINE_LABELS[workout.discipline]} workout`,
+    },
   })
 
   const pointerDownPos = useRef<{ x: number; y: number; time: number } | null>(null)
+  const zoneRanges = useZoneRanges()
 
   const style = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
@@ -92,15 +101,21 @@ export function WorkoutCard({
         }
       }}
       onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
+        // While a keyboard drag is in progress the drag sensor owns the keys.
+        if (isDragging) return
+        if (e.key === "Enter") {
           e.preventDefault()
           onClick?.()
+          return
         }
+        // Space (and the arrow keys once dragging) belong to dnd-kit's keyboard
+        // sensor: Space picks the card up, arrows move it between days.
+        listeners?.onKeyDown?.(e)
       }}
       className={cn(
         // select-none + no touch callout: a long-press to drag must not start
         // text selection or the iOS/Android link/image menu.
-        "w-full min-w-0 cursor-pointer rounded-lg border text-left text-xs shadow-sm transition-all select-none [-webkit-touch-callout:none] hover:-translate-y-0.5 hover:shadow-md",
+        "w-full min-w-0 cursor-pointer rounded-lg border text-left text-xs shadow-sm transition-all select-none [-webkit-touch-callout:none] outline-none hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
         style_.card,
         compact ? "p-1" : "p-2.5",
         isDragging && "opacity-50"
@@ -168,7 +183,14 @@ export function WorkoutCard({
             {workout.planned_distance_km ? formatDistance(workout.planned_distance_km, workout.discipline) : null}
           </div>
           {workout.target_zone && (
-            <div className="mt-0.5 text-muted-foreground">{ZONE_LABELS[workout.target_zone]}</div>
+            <div className="mt-0.5 text-muted-foreground">
+              {ZONE_LABELS[workout.target_zone]}
+              {zoneRanges && (
+                <span className="block text-[11px] tabular-nums">
+                  {formatZoneRange(zoneRanges[workout.target_zone])}
+                </span>
+              )}
+            </div>
           )}
         </>
       )}

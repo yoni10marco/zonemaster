@@ -1,16 +1,19 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
-import { Form } from "@/components/ui/form"
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ProfileFields } from "@/components/auth/ProfileFields"
 import { createClient } from "@/lib/supabase/client"
+import { ZONE_LABELS, INTENSITY_ZONES } from "@/lib/types/domain"
 import { profileSchema, type ProfileInput } from "@/lib/validation/profile"
+import { computeZoneRanges, formatZoneRange } from "@/lib/utils/zones"
 
 export function ProfileEditForm() {
   const [loading, setLoading] = useState(true)
@@ -23,8 +26,20 @@ export function ProfileEditForm() {
       primaryDiscipline: "run",
       targetRaceDate: "",
       targetRaceDistance: "",
+      maxHeartRate: "",
+      restingHeartRate: "",
     },
   })
+
+  // Live preview of the zones the entered heart rates produce.
+  const [maxHeartRate, restingHeartRate] = useWatch({
+    control: form.control,
+    name: ["maxHeartRate", "restingHeartRate"],
+  })
+  const zonePreview = computeZoneRanges(
+    maxHeartRate ? Number(maxHeartRate) : null,
+    restingHeartRate ? Number(restingHeartRate) : null
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -38,7 +53,9 @@ export function ProfileEditForm() {
 
       const { data } = await supabase
         .from("profiles")
-        .select("fitness_level, primary_discipline, target_race_date, target_race_distance")
+        .select(
+          "fitness_level, primary_discipline, target_race_date, target_race_distance, max_heart_rate, resting_heart_rate"
+        )
         .eq("id", user.id)
         .single()
 
@@ -48,6 +65,8 @@ export function ProfileEditForm() {
           primaryDiscipline: data.primary_discipline,
           targetRaceDate: data.target_race_date ?? "",
           targetRaceDistance: data.target_race_distance ?? "",
+          maxHeartRate: data.max_heart_rate?.toString() ?? "",
+          restingHeartRate: data.resting_heart_rate?.toString() ?? "",
         })
         setLoading(false)
       }
@@ -75,6 +94,8 @@ export function ProfileEditForm() {
         primary_discipline: values.primaryDiscipline as ProfileInput["primaryDiscipline"],
         target_race_date: values.targetRaceDate || null,
         target_race_distance: values.targetRaceDistance || null,
+        max_heart_rate: values.maxHeartRate ? Number(values.maxHeartRate) : null,
+        resting_heart_rate: values.restingHeartRate ? Number(values.restingHeartRate) : null,
       })
       .eq("id", user.id)
 
@@ -101,6 +122,58 @@ export function ProfileEditForm() {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <ProfileFields control={form.control} />
+
+        <div className="space-y-3 border-t pt-4">
+          <div>
+            <h3 className="text-sm font-medium">Heart-rate zones</h3>
+            <p className="text-sm text-muted-foreground">
+              Optional. Your zones (Z1–Z5) are shown as heart-rate ranges on workouts and used by the coach.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="maxHeartRate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Max heart rate (bpm)</FormLabel>
+                  <FormControl>
+                    <Input type="number" inputMode="numeric" placeholder="e.g. 190" {...field} value={field.value ?? ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="restingHeartRate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Resting heart rate (bpm)</FormLabel>
+                  <FormControl>
+                    <Input type="number" inputMode="numeric" placeholder="optional" {...field} value={field.value ?? ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <FormDescription>
+            With only a max heart rate, zones are percentages of it. Adding a resting rate makes them more
+            accurate (heart-rate reserve method).
+          </FormDescription>
+          {zonePreview && (
+            <dl className="grid grid-cols-1 gap-x-4 gap-y-1 rounded-lg bg-muted/60 p-3 text-sm sm:grid-cols-2">
+              {INTENSITY_ZONES.map((zone) => (
+                <div key={zone} className="flex justify-between gap-2">
+                  <dt className="text-muted-foreground">{ZONE_LABELS[zone]}</dt>
+                  <dd className="font-medium tabular-nums">{formatZoneRange(zonePreview[zone])}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </div>
+
         <Button type="submit" disabled={submitting}>
           {submitting ? "Saving..." : "Save changes"}
         </Button>

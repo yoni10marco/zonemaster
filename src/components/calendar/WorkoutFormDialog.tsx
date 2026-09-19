@@ -3,8 +3,10 @@
 import { useEffect } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { Copy } from "lucide-react"
 import { toast } from "sonner"
 
+import { useZoneRanges } from "@/components/calendar/ZoneRangesContext"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -45,6 +47,8 @@ import {
   kmToDisplayValue,
   usesMeters,
 } from "@/lib/utils/distance"
+import { REPEAT_WEEK_OPTIONS, repeatDates } from "@/lib/utils/repeat"
+import { formatZoneRange } from "@/lib/utils/zones"
 import {
   parseOptionalNumber,
   plannedWorkoutSchema,
@@ -56,10 +60,15 @@ type WorkoutFormDialogProps = {
   onOpenChange: (open: boolean) => void
   targetDate: string
   workout?: PlannedWorkout | null
+  /** Pre-fills a new workout from an existing one (the "Duplicate" action). */
+  prefill?: PlannedWorkout | null
   mutations: Pick<
     ReturnType<typeof usePlannedWorkouts>,
-    "createWorkout" | "updateWorkout" | "deleteWorkout"
+    "createWorkout" | "createWorkouts" | "updateWorkout" | "deleteWorkout" | "deleteWorkouts"
   >
+  /** Called after a delete so the page can offer "Undo". Without it a plain toast is shown. */
+  onDeleted?: (workout: PlannedWorkout) => void
+  onDuplicate?: (workout: PlannedWorkout) => void
 }
 
 export function WorkoutFormDialog({
@@ -67,9 +76,13 @@ export function WorkoutFormDialog({
   onOpenChange,
   targetDate,
   workout,
+  prefill,
   mutations,
+  onDeleted,
+  onDuplicate,
 }: WorkoutFormDialogProps) {
   const isEditing = !!workout
+  const zoneRanges = useZoneRanges()
 
   const form = useForm<PlannedWorkoutInput>({
     resolver: zodResolver(plannedWorkoutSchema),
@@ -81,6 +94,7 @@ export function WorkoutFormDialog({
       targetZone: undefined,
       title: "",
       notes: "",
+      repeatWeeks: "0",
     },
   })
 
@@ -89,19 +103,36 @@ export function WorkoutFormDialog({
 
   useEffect(() => {
     if (!open) return
+    const source = workout ?? prefill
     form.reset({
       targetDate: workout?.target_date ?? targetDate,
-      discipline: workout?.discipline ?? "run",
-      plannedDurationMinutes: workout?.planned_duration_minutes?.toString() ?? "",
+      discipline: source?.discipline ?? "run",
+      plannedDurationMinutes: source?.planned_duration_minutes?.toString() ?? "",
       plannedDistanceKm:
-        workout?.planned_distance_km != null
-          ? kmToDisplayValue(workout.planned_distance_km, workout.discipline).toString()
+        source?.planned_distance_km != null
+          ? kmToDisplayValue(source.planned_distance_km, source.discipline).toString()
           : "",
-      targetZone: workout?.target_zone ?? undefined,
-      title: workout?.title ?? "",
-      notes: workout?.notes ?? "",
+      targetZone: source?.target_zone ?? undefined,
+      title: source?.title ?? "",
+      notes: source?.notes ?? "",
+      repeatWeeks: "0",
     })
-  }, [open, workout, targetDate, form])
+  }, [open, workout, prefill, targetDate, form])
+
+  function toastWithUndo(message: string, createdIds: number[]) {
+    toast.success(message, {
+      duration: 8000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          mutations
+            .deleteWorkouts(createdIds)
+            .then(() => toast.success("Undone"))
+            .catch((err) => toast.error(err instanceof Error ? err.message : "Couldn't undo"))
+        },
+      },
+    })
+  }
 
   async function onSubmit(values: PlannedWorkoutInput) {
     try {
@@ -117,13 +148,28 @@ export function WorkoutFormDialog({
         title: values.title || null,
         notes: values.notes || null,
       }
+      const copies = repeatDates(values.targetDate, Number(values.repeatWeeks) || 0).map((date) => ({
+        ...payload,
+        target_date: date,
+      }))
 
       if (isEditing && workout) {
         await mutations.updateWorkout(workout.id, payload)
-        toast.success("Workout updated")
+        if (copies.length > 0) {
+          const created = await mutations.createWorkouts(copies)
+          toastWithUndo(
+            `Workout updated and repeated for ${copies.length} more ${copies.length === 1 ? "week" : "weeks"}`,
+            created.map((w) => w.id)
+          )
+        } else {
+          toast.success("Workout updated")
+        }
+      } else if (copies.length > 0) {
+        const created = await mutations.createWorkouts([payload, ...copies])
+        toastWithUndo(`Added ${created.length} workouts`, created.map((w) => w.id))
       } else {
-        await mutations.createWorkout(payload)
-        toast.success("Workout added")
+        const created = await mutations.createWorkout(payload)
+        toastWithUndo("Workout added", [created.id])
       }
       onOpenChange(false)
     } catch (err) {
@@ -135,7 +181,8 @@ export function WorkoutFormDialog({
     if (!workout) return
     try {
       await mutations.deleteWorkout(workout.id)
-      toast.success("Workout deleted")
+      if (onDeleted) onDeleted(workout)
+      else toast.success("Workout deleted")
       onOpenChange(false)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong")
@@ -146,7 +193,9 @@ export function WorkoutFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit workout" : "Add workout"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? "Edit workout" : prefill ? "Duplicate workout" : "Add workout"}
+          </DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -259,6 +308,7 @@ export function WorkoutFormDialog({
                       {INTENSITY_ZONES.map((z) => (
                         <SelectItem key={z} value={z}>
                           {ZONE_LABELS[z]}
+                          {zoneRanges ? ` · ${formatZoneRange(zoneRanges[z])}` : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -296,11 +346,43 @@ export function WorkoutFormDialog({
               )}
             />
 
+            <FormField
+              control={form.control}
+              name="repeatWeeks"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Repeat weekly (optional)</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || "0"}>
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="0">Don&apos;t repeat</SelectItem>
+                      {REPEAT_WEEK_OPTIONS.map((weeks) => (
+                        <SelectItem key={weeks} value={String(weeks)}>
+                          Repeat for {weeks} more {weeks === 1 ? "week" : "weeks"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-between">
               <div className="flex gap-2">
                 {isEditing && (
                   <Button type="button" variant="destructive" onClick={handleDelete}>
                     Delete
+                  </Button>
+                )}
+                {isEditing && workout && onDuplicate && (
+                  <Button type="button" variant="outline" onClick={() => onDuplicate(workout)}>
+                    <Copy />
+                    Duplicate
                   </Button>
                 )}
               </div>

@@ -15,6 +15,8 @@ export const plannedWorkoutSchema = z
     targetZone: z.enum(INTENSITY_ZONES).optional().or(z.literal("")),
     title: z.string().max(120).optional(),
     notes: z.string().max(2000).optional(),
+    // "0" = don't repeat; otherwise how many more weeks to copy this workout to.
+    repeatWeeks: z.string().regex(/^\d{1,2}$/).optional(),
   })
   .refine((data) => hasValue(data.plannedDurationMinutes) || hasValue(data.plannedDistanceKm), {
     message: "Enter a duration or a distance",

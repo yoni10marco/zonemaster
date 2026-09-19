@@ -3,17 +3,19 @@
 import { useState } from "react"
 import Link from "next/link"
 import { addWeeks, format, parseISO } from "date-fns"
-import { CalendarCheck, Check, Loader2, Sparkles, X } from "lucide-react"
+import { CalendarCheck, Check, Loader2, RefreshCw, Sparkles, X } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useProfile } from "@/hooks/useProfile"
 import type { ParsedPlan, WorkoutDraft } from "@/lib/coach/plan"
 import { createClient } from "@/lib/supabase/client"
 import { DISCIPLINE_LABELS, ZONE_LABELS } from "@/lib/types/domain"
 import { cn } from "@/lib/utils"
 import { toISODate, weekRange } from "@/lib/utils/dates"
 import { formatDistance } from "@/lib/utils/distance"
+import { formatZoneRange } from "@/lib/utils/zones"
 import { DISCIPLINE_ICONS, DISCIPLINE_STYLES } from "@/lib/utils/discipline-style"
 
 type WeekChoice = "this" | "next"
@@ -32,11 +34,16 @@ export function PlanWeekPanel() {
   const [items, setItems] = useState<DraftItem[] | null>(null)
   const [busyKey, setBusyKey] = useState<string | null>(null)
   const [addedCount, setAddedCount] = useState(0)
+  const [feedback, setFeedback] = useState("")
+  const { zoneRanges } = useProfile()
 
-  async function generate() {
+  // `revise` = the athlete asked for changes to the drafts currently on screen.
+  async function generate(revise?: string) {
     setGenerating(true)
-    setItems(null)
-    setAddedCount(0)
+    if (!revise) {
+      setItems(null)
+      setAddedCount(0)
+    }
     try {
       const res = await fetch("/api/coach/plan-week", {
         method: "POST",
@@ -45,6 +52,19 @@ export function PlanWeekPanel() {
           weekStart: weekStartISO(week),
           today: toISODate(new Date()),
           ...(focus.trim() ? { focus: focus.trim() } : {}),
+          ...(revise && items
+            ? {
+                feedback: revise,
+                previous: items.map(({ draft }) => ({
+                  date: draft.date,
+                  discipline: draft.discipline,
+                  durationMinutes: draft.durationMinutes,
+                  distanceKm: draft.distanceKm,
+                  zone: draft.zone,
+                  title: draft.title,
+                })),
+              }
+            : {}),
         }),
       })
       if (res.redirected) throw new Error("Your session expired — please log in again")
@@ -53,6 +73,7 @@ export function PlanWeekPanel() {
 
       setSummary(body.summary)
       setItems(body.drafts.map((draft, i) => ({ key: `${draft.date}-${i}`, draft })))
+      if (revise) setFeedback("")
       if (body.drafts.length === 0) toast.info("The coach didn't suggest any workouts — try again")
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "The coach is unavailable right now")
@@ -143,15 +164,38 @@ export function PlanWeekPanel() {
           maxLength={300}
           disabled={generating}
         />
-        <Button onClick={generate} disabled={generating}>
-          {generating ? <Loader2 className="animate-spin" /> : <Sparkles />}
-          {generating ? "Planning..." : "Plan my week"}
+        <Button onClick={() => generate()} disabled={generating}>
+          {generating && !items ? <Loader2 className="animate-spin" /> : <Sparkles />}
+          {generating && !items ? "Planning..." : items ? "Start over" : "Plan my week"}
         </Button>
       </div>
 
       {items && (
         <div className="space-y-3">
           {summary && <p className="rounded-lg bg-muted px-3 py-2 text-sm">{summary}</p>}
+
+          {items.length > 0 && (
+            <form
+              className="flex flex-col gap-2 sm:flex-row"
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (feedback.trim()) generate(feedback.trim())
+              }}
+            >
+              <Input
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                placeholder="Ask for changes, e.g. less running, add a second swim"
+                maxLength={500}
+                disabled={generating}
+                aria-label="Ask the coach to change this plan"
+              />
+              <Button type="submit" variant="secondary" disabled={generating || feedback.trim() === ""}>
+                {generating ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+                Update plan
+              </Button>
+            </form>
+          )}
 
           {items.length > 1 && (
             <Button variant="secondary" size="sm" onClick={acceptAll} disabled={busyKey !== null}>
@@ -167,7 +211,9 @@ export function PlanWeekPanel() {
             const details = [
               d.durationMinutes ? `${d.durationMinutes} min` : null,
               d.distanceKm ? formatDistance(d.distanceKm, d.discipline) : null,
-              d.zone ? ZONE_LABELS[d.zone] : null,
+              d.zone
+                ? `${ZONE_LABELS[d.zone]}${zoneRanges ? ` (${formatZoneRange(zoneRanges[d.zone])})` : ""}`
+                : null,
             ].filter(Boolean)
 
             return (

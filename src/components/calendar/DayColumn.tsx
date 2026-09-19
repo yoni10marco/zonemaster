@@ -39,7 +39,11 @@ export function DayColumn({
   dimmed,
 }: DayColumnProps) {
   const dateISO = toISODate(date)
-  const { setNodeRef, isOver } = useDroppable({ id: `day-${dateISO}`, data: { dateISO } })
+  const { setNodeRef, isOver } = useDroppable({
+    id: `day-${dateISO}`,
+    // `label` is read aloud by screen readers during keyboard dragging.
+    data: { dateISO, label: date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }) },
+  })
   const pointerDownPos = useRef<{ x: number; y: number } | null>(null)
 
   // Training days get a visible tint so a glance at the grid shows load —

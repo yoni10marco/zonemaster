@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from "react"
 
 import { createClient } from "@/lib/supabase/client"
 import type { Tables, TablesInsert, TablesUpdate } from "@/lib/types/database.types"
-import { toISODate } from "@/lib/utils/dates"
+import { addDaysISO, toISODate } from "@/lib/utils/dates"
+import { shiftWorkouts } from "@/lib/utils/repeat"
 
 export type PlannedWorkout = Tables<"planned_workouts">
 export type PlannedWorkoutInsert = TablesInsert<"planned_workouts">
@@ -62,6 +63,68 @@ export function usePlannedWorkouts(rangeStart: Date | null, rangeEnd: Date | nul
     return data
   }
 
+  // Insert several workouts at once (repeat / duplicate / copy week). Only the
+  // ones that fall inside the visible range are added to local state; the rest
+  // simply show up when the user navigates there.
+  async function createWorkouts(inputs: Omit<PlannedWorkoutInsert, "user_id">[]) {
+    if (inputs.length === 0) return []
+    const supabase = createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) throw new Error("Not authenticated")
+
+    const { data, error } = await supabase
+      .from("planned_workouts")
+      .insert(inputs.map((input) => ({ ...input, user_id: user.id })))
+      .select()
+
+    if (error) throw new Error(error.message)
+    const visible = data.filter(
+      (w) => (!startISO || w.target_date >= startISO) && (!endISO || w.target_date <= endISO)
+    )
+    if (visible.length > 0) {
+      setWorkouts((prev) =>
+        [...prev, ...visible].sort((a, b) => a.target_date.localeCompare(b.target_date))
+      )
+    }
+    return data
+  }
+
+  async function deleteWorkouts(ids: number[]) {
+    if (ids.length === 0) return
+    const supabase = createClient()
+    const { error } = await supabase.from("planned_workouts").delete().in("id", ids)
+    if (error) throw new Error(error.message)
+    setWorkouts((prev) => prev.filter((w) => !ids.includes(w.id)))
+  }
+
+  // Copy the workouts of the 7 days starting at `sourceStartISO` onto the week
+  // `shiftDays` later, skipping anything already identical there.
+  async function copyWeek(sourceStartISO: string, shiftDays: number) {
+    const supabase = createClient()
+    const sourceEnd = addDaysISO(sourceStartISO, 6)
+    const targetStart = addDaysISO(sourceStartISO, shiftDays)
+    const targetEnd = addDaysISO(sourceEnd, shiftDays)
+
+    const [source, target] = await Promise.all([
+      supabase
+        .from("planned_workouts")
+        .select("*")
+        .gte("target_date", sourceStartISO)
+        .lte("target_date", sourceEnd),
+      supabase
+        .from("planned_workouts")
+        .select("*")
+        .gte("target_date", targetStart)
+        .lte("target_date", targetEnd),
+    ])
+    if (source.error) throw new Error(source.error.message)
+    if (target.error) throw new Error(target.error.message)
+
+    return createWorkouts(shiftWorkouts(source.data, target.data, shiftDays))
+  }
+
   async function updateWorkout(id: number, input: PlannedWorkoutUpdate) {
     const supabase = createClient()
     const { data, error } = await supabase
@@ -105,8 +168,11 @@ export function usePlannedWorkouts(rangeStart: Date | null, rangeEnd: Date | nul
     error,
     refetch,
     createWorkout,
+    createWorkouts,
+    copyWeek,
     updateWorkout,
     deleteWorkout,
+    deleteWorkouts,
     rescheduleWorkout,
   }
 }

@@ -1,4 +1,4 @@
-import type { SessionMember, SessionMemberStatus } from "@/lib/friends/shared-session"
+import { overviewRowsToMap, type SessionMember } from "@/lib/friends/shared-session"
 import { createClient } from "@/lib/supabase/client"
 import type { Discipline, IntensityZone } from "@/lib/types/domain"
 
@@ -35,24 +35,11 @@ export async function leaveSharedSession(sessionId: number): Promise<void> {
 
 /** Who is in each of these sessions (only sessions you have accepted come back). */
 export async function fetchSessionOverview(sessionIds: number[]): Promise<Map<number, SessionMember[]>> {
-  const bySession = new Map<number, SessionMember[]>()
-  if (sessionIds.length === 0) return bySession
+  if (sessionIds.length === 0) return new Map()
 
   const { data, error } = await createClient().rpc("shared_session_overview", { p_session_ids: sessionIds })
   fail(error)
-  for (const row of data ?? []) {
-    const list = bySession.get(row.session_id) ?? []
-    list.push({
-      userId: row.user_id,
-      username: row.username,
-      status: row.status as SessionMemberStatus,
-      completed: row.completed,
-      isMe: row.is_me,
-      isCreator: row.is_creator,
-    })
-    bySession.set(row.session_id, list)
-  }
-  return bySession
+  return overviewRowsToMap(data ?? [])
 }
 
 export type SessionInvite = {

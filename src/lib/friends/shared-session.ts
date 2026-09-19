@@ -93,3 +93,44 @@ export function togetherStats(sessions: SessionMember[][]): TogetherStats {
     partners: [...partners.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
   }
 }
+
+/** One row of the `shared_session_overview` database function. */
+export type SessionOverviewRow = {
+  session_id: number
+  user_id: string
+  username: string | null
+  status: string
+  completed: boolean
+  is_me: boolean
+  is_creator: boolean
+}
+
+/** Groups the database rows by session. */
+export function overviewRowsToMap(rows: SessionOverviewRow[]): Map<number, SessionMember[]> {
+  const bySession = new Map<number, SessionMember[]>()
+  for (const row of rows) {
+    const list = bySession.get(row.session_id) ?? []
+    list.push({
+      userId: row.user_id,
+      username: row.username,
+      status: row.status as SessionMemberStatus,
+      completed: row.completed,
+      isMe: row.is_me,
+      isCreator: row.is_creator,
+    })
+    bySession.set(row.session_id, list)
+  }
+  return bySession
+}
+
+/**
+ * Who you are doing a session with, for the AI coach: friends who accepted, and
+ * whether each already completed it. Empty when nobody else joined.
+ * ("bobby (completed), carl")
+ */
+export function describeSharing(members: SessionMember[]): string {
+  return summarizeSession(members)
+    .others.filter((m) => m.status === "accepted")
+    .map((m) => `${m.username ?? NAME_FALLBACK}${m.completed ? " (completed)" : ""}`)
+    .join(", ")
+}

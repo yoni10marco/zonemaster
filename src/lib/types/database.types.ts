@@ -365,6 +365,7 @@ export type Database = {
     Functions: {
       block_user: { Args: { p_user_id: string }; Returns: undefined }
       cancel_friend_request: { Args: { p_friendship_id: number }; Returns: undefined }
+      delete_my_account: { Args: never; Returns: undefined }
       create_shared_session: {
         Args: { p_friend_ids: string[]; p_planned_workout_id: number }
         Returns: number

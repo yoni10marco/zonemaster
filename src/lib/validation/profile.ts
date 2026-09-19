@@ -1,6 +1,7 @@
 import { z } from "zod"
 
 import { DISCIPLINES, FITNESS_LEVELS } from "@/lib/types/domain"
+import { USERNAME_HELP, isValidUsername, normalizeUsername } from "@/lib/validation/friends"
 import { FTP_LIMITS, RUN_PACE_LIMITS, SWIM_CSS_LIMITS, formatPace, parsePace } from "@/lib/utils/training-zones"
 import { MAX_HR_LIMITS, RESTING_HR_LIMITS } from "@/lib/utils/zones"
 
@@ -9,6 +10,12 @@ export const signupSchema = z
     email: z.string().email("Enter a valid email address"),
     password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string(),
+    // Optional: it only matters for finding friends, and can be set later in Settings.
+    username: z
+      .string()
+      .optional()
+      .or(z.literal(""))
+      .refine((v) => !v || isValidUsername(normalizeUsername(v)), { message: USERNAME_HELP }),
     fitnessLevel: z.enum(FITNESS_LEVELS),
     primaryDiscipline: z.enum(DISCIPLINES),
     targetRaceDate: z.string().optional().or(z.literal("")),

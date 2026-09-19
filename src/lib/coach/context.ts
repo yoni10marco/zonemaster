@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 
 import type { Database, Tables } from "@/lib/types/database.types"
 import { DISCIPLINES, DISCIPLINE_LABELS } from "@/lib/types/domain"
+import { describeSharing, overviewRowsToMap, togetherStats, type SessionMember } from "@/lib/friends/shared-session"
 import { buildZoneGuide, describeZonesForCoach } from "@/lib/utils/training-zones"
 import { toISODate } from "@/lib/utils/dates"
 import { formatDistance } from "@/lib/utils/distance"
@@ -23,23 +24,23 @@ function clean(text: string | null, max = 60): string {
   return text.replace(/\s+/g, " ").trim().slice(0, max)
 }
 
-function describeCompleted(c: Completed): string {
+function describeCompleted(c: Completed, sharing = ""): string {
   const parts = [c.execution_date, DISCIPLINE_LABELS[c.discipline]]
   if (c.actual_duration_minutes) parts.push(`${c.actual_duration_minutes} min`)
   if (c.actual_distance_km) parts.push(formatDistance(c.actual_distance_km, c.discipline))
   if (c.avg_heart_rate) parts.push(`avg HR ${c.avg_heart_rate}`)
   if (c.avg_pace_or_power) parts.push(c.avg_pace_or_power)
   if (c.rpe) parts.push(`RPE ${c.rpe}`)
-  return `- ${parts.join(", ")} [${c.planned_workout_id ? "planned" : "unplanned"}]`
+  return `- ${parts.join(", ")} [${c.planned_workout_id ? "planned" : "unplanned"}]${sharing}`
 }
 
-function describePlanned(p: Planned): string {
+function describePlanned(p: Planned, sharing = ""): string {
   const parts = [p.target_date, DISCIPLINE_LABELS[p.discipline]]
   if (p.planned_duration_minutes) parts.push(`${p.planned_duration_minutes} min`)
   if (p.planned_distance_km) parts.push(formatDistance(p.planned_distance_km, p.discipline))
   if (p.target_zone) parts.push(p.target_zone.toUpperCase())
   const title = clean(p.title)
-  return `- ${parts.join(", ")}${title ? ` ("${title}")` : ""}`
+  return `- ${parts.join(", ")}${title ? ` ("${title}")` : ""}${sharing}`
 }
 
 function disciplineTotals(completed: Completed[]): string {
@@ -93,6 +94,20 @@ export async function buildTrainingContext(
   const completed = completedRes.data ?? []
   const planned = plannedRes.data ?? []
 
+  // Sessions done with friends: only who joined and whether they finished (never their
+  // calendar), and only usernames, which are limited to lowercase letters, digits and _.
+  const sharedIds = planned.flatMap((p) => (p.shared_session_id === null ? [] : [p.shared_session_id]))
+  let sessions = new Map<number, SessionMember[]>()
+  if (sharedIds.length > 0) {
+    const { data, error } = await supabase.rpc("shared_session_overview", { p_session_ids: sharedIds })
+    if (!error) sessions = overviewRowsToMap(data ?? [])
+  }
+  const sharing = (p: Planned | undefined): string => {
+    const who = p?.shared_session_id ? describeSharing(sessions.get(p.shared_session_id) ?? []) : ""
+    return who ? ` [with ${who}]` : ""
+  }
+  const plannedById = new Map(planned.map((p) => [p.id, p]))
+
   const linkedIds = new Set(
     completed.map((c) => c.planned_workout_id).filter((id): id is number => id !== null)
   )
@@ -123,12 +138,22 @@ export async function buildTrainingContext(
   lines.push(
     `Plan adherence over the last ${HISTORY_DAYS} days: ${plannedDone} of ${past.length} planned sessions completed.`
   )
+  const together = togetherStats(past.flatMap((p) => (p.shared_session_id && sessions.has(p.shared_session_id) ? [sessions.get(p.shared_session_id)!] : [])))
+  if (together.planned > 0) {
+    const partners = together.partners.map((t) => `${t.name} ${t.count}`).join(", ")
+    lines.push(
+      `Sessions planned with friends over the last ${HISTORY_DAYS} days: ${together.planned}, of which you and a friend both completed ${together.done}${partners ? ` (${partners})` : ""}.`
+    )
+  }
 
   lines.push("")
   lines.push(`Completed workouts (most recent first, up to ${MAX_COMPLETED_LISTED}):`)
   lines.push(
     completed.length > 0
-      ? completed.slice(0, MAX_COMPLETED_LISTED).map(describeCompleted).join("\n")
+      ? completed
+          .slice(0, MAX_COMPLETED_LISTED)
+          .map((c) => describeCompleted(c, sharing(plannedById.get(c.planned_workout_id ?? -1))))
+          .join("\n")
       : "- none"
   )
 
@@ -136,7 +161,10 @@ export async function buildTrainingContext(
   lines.push("Planned sessions that were not completed:")
   lines.push(
     missed.length > 0
-      ? missed.slice(-MAX_MISSED_LISTED).map(describePlanned).join("\n")
+      ? missed
+          .slice(-MAX_MISSED_LISTED)
+          .map((p) => describePlanned(p, sharing(p)))
+          .join("\n")
       : "- none"
   )
 
@@ -144,7 +172,10 @@ export async function buildTrainingContext(
   lines.push(`Planned sessions coming up (next ${UPCOMING_DAYS} days):`)
   lines.push(
     upcoming.length > 0
-      ? upcoming.slice(0, MAX_UPCOMING_LISTED).map(describePlanned).join("\n")
+      ? upcoming
+          .slice(0, MAX_UPCOMING_LISTED)
+          .map((p) => describePlanned(p, sharing(p)))
+          .join("\n")
       : "- nothing planned"
   )
 

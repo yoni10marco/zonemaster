@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { profileSchema } from "@/lib/validation/profile"
+import { profileSchema, signupSchema } from "@/lib/validation/profile"
 
 const base = {
   fitnessLevel: "intermediate",
@@ -41,5 +41,36 @@ describe("profileSchema: power and pace", () => {
     const result = check({ runThresholdPace: "fast" })
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error.issues[0].message).toMatch(/minutes:seconds/)
+  })
+})
+
+describe("signupSchema: username", () => {
+  const signup = {
+    email: "a@b.co",
+    password: "longenough",
+    confirmPassword: "longenough",
+    fitnessLevel: "intermediate",
+    primaryDiscipline: "run",
+    targetRaceDate: "",
+    targetRaceDistance: "",
+    username: "",
+  } as const
+  const check = (username: string) => signupSchema.safeParse({ ...signup, username })
+
+  it("is optional", () => {
+    expect(check("").success).toBe(true)
+    expect(signupSchema.safeParse({ ...signup, username: undefined }).success).toBe(true)
+  })
+
+  it("accepts a valid username in any letter case, ignoring surrounding spaces", () => {
+    expect(check("alex_runs").success).toBe(true)
+    expect(check("  Alex_Runs ").success).toBe(true)
+  })
+
+  it("rejects usernames that are too short, too long, or use other characters", () => {
+    expect(check("ab").success).toBe(false)
+    expect(check("a".repeat(21)).success).toBe(false)
+    expect(check("no spaces").success).toBe(false)
+    expect(check("café").success).toBe(false)
   })
 })

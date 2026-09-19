@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest"
 
 import {
   describeOthers,
+  describeSharing,
+  overviewRowsToMap,
   summarizeSession,
   togetherStats,
   type SessionMember,
@@ -131,5 +133,46 @@ describe("togetherStats", () => {
   it("falls back to 'someone' for a partner without a username", () => {
     const stats = togetherStats([[me(true), m("x", { username: null, completed: true })]])
     expect(stats.partners[0].name).toBe("someone")
+  })
+})
+
+describe("describeSharing (for the coach)", () => {
+  const m = (username: string | null, o: Partial<SessionMember> = {}): SessionMember => ({
+    userId: `id-${username}`,
+    username,
+    status: "accepted",
+    completed: false,
+    isMe: false,
+    isCreator: false,
+    ...o,
+  })
+  const me: SessionMember = m("me", { isMe: true })
+
+  it("lists friends who joined and marks the ones who already finished", () => {
+    expect(describeSharing([me, m("carl"), m("bobby", { completed: true })])).toBe("bobby (completed), carl")
+  })
+
+  it("leaves out friends who are still deciding or said no", () => {
+    expect(describeSharing([me, m("carl", { status: "invited" }), m("dora", { status: "declined" })])).toBe("")
+  })
+
+  it("is empty when it is only you, and falls back to 'someone' without a username", () => {
+    expect(describeSharing([me])).toBe("")
+    expect(describeSharing([me, m(null)])).toBe("someone")
+  })
+})
+
+describe("overviewRowsToMap", () => {
+  it("groups database rows by session", () => {
+    const map = overviewRowsToMap([
+      { session_id: 1, user_id: "a", username: "amy", status: "accepted", completed: true, is_me: true, is_creator: true },
+      { session_id: 1, user_id: "b", username: "bo", status: "invited", completed: false, is_me: false, is_creator: false },
+      { session_id: 2, user_id: "a", username: "amy", status: "accepted", completed: false, is_me: true, is_creator: false },
+    ])
+    expect(map.size).toBe(2)
+    expect(map.get(1)).toEqual([
+      { userId: "a", username: "amy", status: "accepted", completed: true, isMe: true, isCreator: true },
+      { userId: "b", username: "bo", status: "invited", completed: false, isMe: false, isCreator: false },
+    ])
   })
 })

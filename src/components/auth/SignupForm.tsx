@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -18,6 +19,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { ProfileFields } from "@/components/auth/ProfileFields"
 import { createClient } from "@/lib/supabase/client"
+import { USERNAME_HELP, normalizeUsername } from "@/lib/validation/friends"
 import { signupSchema, type SignupInput } from "@/lib/validation/profile"
 
 export function SignupForm() {
@@ -31,6 +33,7 @@ export function SignupForm() {
       email: "",
       password: "",
       confirmPassword: "",
+      username: "",
       fitnessLevel: "intermediate",
       primaryDiscipline: "run",
       targetRaceDate: "",
@@ -52,6 +55,7 @@ export function SignupForm() {
       password: values.password,
       options: {
         data: {
+          username: values.username ? normalizeUsername(values.username) : null,
           fitness_level: values.fitnessLevel,
           primary_discipline: values.primaryDiscipline,
           target_race_date: values.targetRaceDate || null,
@@ -131,6 +135,23 @@ export function SignupForm() {
               <FormControl>
                 <Input type="password" autoComplete="new-password" {...field} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="username"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Username (optional)</FormLabel>
+              <FormControl>
+                <Input autoComplete="off" autoCapitalize="none" placeholder="e.g. alex_runs" {...field} value={field.value ?? ""} />
+              </FormControl>
+              <FormDescription>
+                Lets friends find you to train together. Change it any time in Settings. {USERNAME_HELP}.
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

@@ -1,6 +1,7 @@
 import { UserCog } from "lucide-react"
 
 import { ProfileEditForm } from "@/components/auth/ProfileEditForm"
+import { DeleteAccountCard } from "@/components/auth/DeleteAccountCard"
 import { MyFriendIdCard } from "@/components/friends/MyFriendIdCard"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
@@ -26,6 +27,8 @@ export default function SettingsPage() {
       </Card>
 
       <MyFriendIdCard />
+
+      <DeleteAccountCard />
     </div>
   )
 }

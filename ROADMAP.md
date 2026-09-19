@@ -13,6 +13,7 @@ Add friends and plan training together. **Status: all three slices built and tes
   - Known and expected: the Supabase advisor lists the friend functions as "signed-in users can execute a SECURITY DEFINER function". That is the intended API; each function checks the caller and returns only a username and the state of the relationship.
 - **Slice 2: shared sessions. Built and pushed** (migrations 0011 and 0012 applied to the live database; real-browser walkthrough done; the invite card hides the inviter from the "With" list).
 - **Slice 3: polish.** Built: "Trained together" card on the dashboard (done / planned together, and who with). Rate limits, unfriend cleanup and empty states were already covered in slices 1 and 2.
+- **Follow-ups (built):** optional username field at signup (migration 0015), the coach knows which sessions are shared and with whom (only accepted friends' usernames and whether they finished), and a "Delete account" button in Settings (migration 0016, `delete_my_account()`, typed confirmation).
 
 ### Decisions (from the product owner)
 

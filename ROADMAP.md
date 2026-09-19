@@ -2,28 +2,79 @@
 
 ## Next: training with friends
 
-Add friends and plan training together.
+Add friends and plan training together. **Status: slice 1 built and tested (not yet pushed); slices 2 and 3 to do.**
 
-**Goals**
+### Progress
 
-- Send, accept and decline friend requests (by email or an invite link).
-- See a friend's planned and completed workouts, if they choose to share them.
-- Plan a session together: invite a friend to a workout, they accept, and it appears on both calendars.
-- A shared view of who is training what this week.
+- **Slice 1: identity and friends. Built.**
+  - Database (already applied to the live database, migrations 0009 and 0010): username, immutable friend ID, `friendships`, and the friend functions with rate limits.
+  - App: the friend ID card in Settings, the Friends page (find, requests, list, unfriend, block) and the menu badge.
+  - Checked with 55 database security tests as different users (all passing, rolled back), 37 new automated tests, and a full click-through against the real database.
+  - Known and expected: the Supabase advisor lists the friend functions as "signed-in users can execute a SECURITY DEFINER function". That is the intended API; each function checks the caller and returns only a username and the state of the relationship.
+- **Slice 2: shared sessions.** Not started.
+- **Slice 3: polish.** Not started.
 
-**Design notes to settle before building**
+### Decisions (from the product owner)
 
-- **Privacy first.** Sharing is opt-in and revocable. Per-friend visibility levels (nothing / planned sessions only / planned and completed). Coach chat history and profile details (heart rate, race goal) stay private unless explicitly shared.
-- **Data model.** A `friendships` table (requester, addressee, status: pending / accepted / blocked), and a `workout_invites` table (workout, invitee, status). Row-level security must allow a friend to read only what has been shared, never the whole `planned_workouts` table.
-- **Shared sessions.** Decide whether an accepted invite creates a copy on the friend's calendar (independent afterwards) or a linked workout (edits sync). Copies are simpler; links are better for "same session, same time".
-- **Notifications.** An invite needs to reach the friend somewhere (a badge in the app at minimum).
-- **Coach.** Optionally let "Plan my week" take a friend's plan into account, but only with their consent.
+1. **Finding friends:** every profile gets a **username** and a **friend ID**. The friend ID is created at signup and can never be changed. To add someone you must know **both** their username and their friend ID (like `alex` + `K7M2-9QXA`). There is no search-by-email and no browsing of users.
+2. **Privacy:** being friends shows a friend **nothing** of your calendar. A friend only ever sees:
+   - sessions you **planned together** (a session you both belong to), and
+   - whether you **completed those together**.
+   Your personal planned and completed workouts, profile, race goal, heart rate and coach chat stay private, always. There are no per-friend visibility settings to manage, because sharing happens per session.
+3. **Notifications:** an in-app badge only (pending friend requests and session invites). No email, no push.
+4. **Shared sessions (confirmed):** one shared record says what was planned together; each person gets **their own independent copy** on their calendar, linked to it. Moving or editing your own copy never affects the friend's. Deleting your copy means leaving the session.
+5. **Username (confirmed):** can be changed later; it need not be unique, because the friend ID identifies the person.
 
-**Suggested first slice**
+### How it works for a user
 
-1. Friend requests and a friends list (no sharing yet).
-2. Share planned workouts with accepted friends, read-only.
-3. Invite a friend to a workout.
+- **Settings:** a new "Friends" card shows your username (editable) and your friend ID (read-only, with a Copy button). Until a username is set you cannot be found. Existing accounts get a friend ID automatically and are asked to choose a username.
+- **Friends page** (new menu item with a badge): tabs for *Friends*, *Requests* and *Add friend*.
+  - *Add friend:* enter username + friend ID, see the match, send a request.
+  - *Requests:* accept or decline incoming friend requests and session invites; cancel requests you sent.
+  - *Friends:* your friends, with Unfriend and Block.
+- **Planning together:** in the workout form, a "Do it together" section lets you pick friends. They get an invite; when they accept, the session is added to their calendar as their own copy. Cards show "With Alex" and each person's done-state (waiting / done).
+- **Completing together:** each person ticks their own copy as done. Everyone in the session can see who has completed it, nothing more (no durations, distances or notes). When two or more have completed it, it shows as *Done together*.
+- **Dashboard:** a small "Trained together" count for the period.
+
+### Data model (new migration, all additive)
+
+| Table / change | Purpose |
+|---|---|
+| `profiles` + `username`, `friend_code` | `friend_code` is unique, generated by the database at signup (8 characters, no look-alikes), and protected by a trigger so it can never be updated. |
+| `friendships` | requester, addressee, status (`pending` / `accepted` / `blocked`); one row per pair, never duplicated in either direction; cannot befriend yourself. |
+| `shared_sessions` | the planned-together record: creator, date, discipline, title, notes, target duration/distance/zone. |
+| `shared_session_members` | who is in a session: status (`invited` / `accepted` / `declined`) and a link to that member's own calendar copy. |
+| `planned_workouts` + `shared_session_id` | lets a calendar card show "With Alex". Existing owner-only rules stay exactly as they are. |
+
+### Security rules (the important part)
+
+- No policy ever lets one user read another user's `planned_workouts`, `completed_workouts`, `profiles` or `ai_chat_history`. Everything a friend may see comes through a few `security definer` functions that return only: username, friendship state, session details, and a per-member "completed yes/no".
+- The functions pin their `search_path`, and execution is granted to logged-in users only.
+- Finding a user requires the exact username **and** friend ID; lookups are rate-limited per user, so IDs cannot be guessed (32^8 possibilities plus the throttle).
+- Friend requests are rate-limited; Block hides you from that person entirely.
+- **Unfriend / block** removes both of you from each other's shared sessions; the calendar copies stay as ordinary workouts and the link is cleared.
+- Deleting an account deletes its friendships and memberships.
+- After the migration: run the Supabase security and performance advisors, and test the policies directly in SQL as two different users (a rolled-back transaction) to prove a friend cannot read anything personal.
+
+### Delivery in three slices (each one tested, then pushed)
+
+**Slice 1 — Identity and friends (medium).** Migration for username / friend ID / friendships, the friend functions, the Settings card, the Friends page (add, requests, list, unfriend, block) and the badge.
+
+**Slice 2 — Shared sessions (large).** `shared_sessions` and members, invite / accept / decline / leave, the "Do it together" section in the workout form, "With Alex" cards, completion status.
+
+**Slice 3 — Polish (small).** "Trained together" on the dashboard, rate limits and empty states, cleanup on unfriend, undo where it makes sense.
+
+### Testing plan
+
+- **Database:** SQL tests as two users proving each rule above (cannot read the other's workouts, can read only shared sessions, can't edit the friend ID, can't duplicate friendships, throttles work).
+- **Logic and UI:** Vitest for validation (username rules, friend ID format), the friends and invites components (with a mocked backend), and the new form section.
+- **In the real app:** the same approach as before — baseline the database, exercise each flow, delete the test data, and confirm the counts match.
+- The existing `npm run check` and the GitHub workflow keep guarding everything.
+
+### Settled details
+
+- Username rules: 3–20 characters, lowercase letters, numbers and underscore.
+- A shared session holds at most 8 people.
 
 ## Ideas parked for later
 

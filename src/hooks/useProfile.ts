@@ -14,10 +14,12 @@ export type Profile = Pick<
   | "target_race_distance"
   | "max_heart_rate"
   | "resting_heart_rate"
+  | "username"
+  | "friend_code"
 >
 
 const PROFILE_COLUMNS =
-  "fitness_level, primary_discipline, target_race_date, target_race_distance, max_heart_rate, resting_heart_rate"
+  "fitness_level, primary_discipline, target_race_date, target_race_distance, max_heart_rate, resting_heart_rate, username, friend_code"
 
 export function useProfile() {
   const [profile, setProfile] = useState<Profile | null>(null)

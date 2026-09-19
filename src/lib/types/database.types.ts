@@ -103,6 +103,57 @@ export type Database = {
           },
         ]
       }
+      friend_actions: {
+        Row: {
+          created_at: string
+          id: number
+          kind: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          kind: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          kind?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      friendships: {
+        Row: {
+          addressee_id: string
+          blocked_by: string | null
+          created_at: string
+          id: number
+          requester_id: string
+          responded_at: string | null
+          status: string
+        }
+        Insert: {
+          addressee_id: string
+          blocked_by?: string | null
+          created_at?: string
+          id?: never
+          requester_id: string
+          responded_at?: string | null
+          status?: string
+        }
+        Update: {
+          addressee_id?: string
+          blocked_by?: string | null
+          created_at?: string
+          id?: never
+          requester_id?: string
+          responded_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       integrations: {
         Row: {
           access_token: string | null
@@ -189,6 +240,7 @@ export type Database = {
           created_at: string
           email: string
           fitness_level: Database["public"]["Enums"]["fitness_level"]
+          friend_code: string
           id: string
           max_heart_rate: number | null
           primary_discipline: Database["public"]["Enums"]["discipline"]
@@ -196,11 +248,13 @@ export type Database = {
           target_race_date: string | null
           target_race_distance: string | null
           updated_at: string
+          username: string | null
         }
         Insert: {
           created_at?: string
           email: string
           fitness_level?: Database["public"]["Enums"]["fitness_level"]
+          friend_code?: string
           id: string
           max_heart_rate?: number | null
           primary_discipline?: Database["public"]["Enums"]["discipline"]
@@ -208,11 +262,13 @@ export type Database = {
           target_race_date?: string | null
           target_race_distance?: string | null
           updated_at?: string
+          username?: string | null
         }
         Update: {
           created_at?: string
           email?: string
           fitness_level?: Database["public"]["Enums"]["fitness_level"]
+          friend_code?: string
           id?: string
           max_heart_rate?: number | null
           primary_discipline?: Database["public"]["Enums"]["discipline"]
@@ -220,6 +276,7 @@ export type Database = {
           target_race_date?: string | null
           target_race_distance?: string | null
           updated_at?: string
+          username?: string | null
         }
         Relationships: []
       }
@@ -228,7 +285,33 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      block_user: { Args: { p_user_id: string }; Returns: undefined }
+      cancel_friend_request: { Args: { p_friendship_id: number }; Returns: undefined }
+      find_user: {
+        Args: { p_friend_code: string; p_username: string }
+        Returns: { relationship: string; user_id: string; username: string }[]
+      }
+      list_friendships: {
+        Args: never
+        Returns: {
+          created_at: string
+          friendship_id: number
+          kind: string
+          other_user_id: string
+          username: string
+        }[]
+      }
+      pending_counts: {
+        Args: never
+        Returns: { friend_requests: number; session_invites: number }[]
+      }
+      remove_friend: { Args: { p_user_id: string }; Returns: undefined }
+      respond_friend_request: {
+        Args: { p_accept: boolean; p_friendship_id: number }
+        Returns: undefined
+      }
+      send_friend_request: { Args: { p_user_id: string }; Returns: number }
+      unblock_user: { Args: { p_user_id: string }; Returns: undefined }
     }
     Enums: {
       discipline: "swim" | "bike" | "run" | "strength" | "other"

@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { CalendarDays, LayoutDashboard, Sparkles } from "lucide-react"
 
+import { FriendsNavLink } from "@/components/friends/FriendsNavLink"
 import { UserMenu } from "@/components/layout/UserMenu"
 import { ZoneLogo } from "@/components/layout/ZoneLogo"
 
@@ -38,6 +39,7 @@ export function NavBar({ email }: { email: string }) {
             <Sparkles className="size-4 shrink-0" />
             <span className="hidden sm:inline">Coach</span>
           </Link>
+          <FriendsNavLink />
         </nav>
         <UserMenu email={email} />
       </div>

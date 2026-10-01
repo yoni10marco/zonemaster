@@ -2,7 +2,7 @@
 
 ## Next: training with friends
 
-Add friends and plan training together. **Status: all three slices built and tested. Slices 1 and 2 are pushed; slice 3 is committed locally, not pushed yet.**
+Add friends and plan training together. **Status: all three slices built, tested and pushed.**
 
 ### Progress
 

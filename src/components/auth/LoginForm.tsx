@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
@@ -34,9 +35,11 @@ export function LoginForm() {
 
     const { error } = await supabase.auth.signInWithPassword(values)
 
-    setSubmitting(false)
-
     if (error) {
+      // On success, submitting stays true: the form is about to be replaced by
+      // the calendar page, so resetting it here would only flash the button
+      // back to "Log in" for an instant before that navigation lands.
+      setSubmitting(false)
       toast.error(error.message)
       return
     }
@@ -77,6 +80,7 @@ export function LoginForm() {
         />
 
         <Button type="submit" className="w-full" disabled={submitting}>
+          {submitting && <Loader2 className="animate-spin" />}
           {submitting ? "Logging in..." : "Log in"}
         </Button>
       </form>

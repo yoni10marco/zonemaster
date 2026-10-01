@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { format, parseISO } from "date-fns"
-import { Check, X } from "lucide-react"
+import { Check, Loader2, X } from "lucide-react"
 import { toast } from "sonner"
 
 import { Avatar } from "@/components/friends/Avatar"
@@ -30,10 +30,12 @@ function details(invite: SessionInvite): string {
 }
 
 export function SessionInvitesList({ invites, onRespond }: SessionInvitesListProps) {
-  const [busyId, setBusyId] = useState<number | null>(null)
+  // Tracks which invite, and which of its two buttons, is mid-request — so
+  // only the one actually clicked shows a spinner.
+  const [busy, setBusy] = useState<{ sessionId: number; accept: boolean } | null>(null)
 
   async function respond(invite: SessionInvite, accept: boolean) {
-    setBusyId(invite.sessionId)
+    setBusy({ sessionId: invite.sessionId, accept })
     try {
       await onRespond(invite.sessionId, accept)
       toast.success(
@@ -44,7 +46,7 @@ export function SessionInvitesList({ invites, onRespond }: SessionInvitesListPro
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong")
     } finally {
-      setBusyId(null)
+      setBusy(null)
     }
   }
 
@@ -57,7 +59,7 @@ export function SessionInvitesList({ invites, onRespond }: SessionInvitesListPro
         {invites.map((invite) => {
           const style = DISCIPLINE_STYLES[invite.discipline]
           const Icon = DISCIPLINE_ICONS[invite.discipline]
-          const busy = busyId === invite.sessionId
+          const isBusy = busy?.sessionId === invite.sessionId
           return (
             <li key={invite.sessionId} className={cn("space-y-2 rounded-xl border p-3", style.card)}>
               <div className="flex items-start gap-3">
@@ -81,12 +83,12 @@ export function SessionInvitesList({ invites, onRespond }: SessionInvitesListPro
                 </div>
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" size="sm" disabled={busy} onClick={() => respond(invite, false)}>
-                  <X />
+                <Button variant="outline" size="sm" disabled={isBusy} onClick={() => respond(invite, false)}>
+                  {isBusy && !busy.accept ? <Loader2 className="animate-spin" /> : <X />}
                   Decline
                 </Button>
-                <Button size="sm" disabled={busy} onClick={() => respond(invite, true)}>
-                  <Check />
+                <Button size="sm" disabled={isBusy} onClick={() => respond(invite, true)}>
+                  {isBusy && busy.accept ? <Loader2 className="animate-spin" /> : <Check />}
                   Accept
                 </Button>
               </div>

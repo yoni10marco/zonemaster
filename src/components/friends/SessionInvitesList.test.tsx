@@ -78,6 +78,24 @@ describe("SessionInvitesList", () => {
     expect(toastSuccess).not.toHaveBeenCalled()
   })
 
+  it("spins only the button that was clicked, and disables the other one too", async () => {
+    let resolve!: () => void
+    const onRespond = vi.fn(() => new Promise<void>((r) => (resolve = r)))
+    const user = userEvent.setup()
+    render(<SessionInvitesList invites={[invite()]} onRespond={onRespond} />)
+
+    await user.click(screen.getByRole("button", { name: "Accept" }))
+    const accept = screen.getByRole("button", { name: "Accept" })
+    const decline = screen.getByRole("button", { name: "Decline" })
+    expect(accept).toBeDisabled()
+    expect(accept.querySelector("svg.animate-spin")).toBeInTheDocument()
+    expect(decline).toBeDisabled()
+    expect(decline.querySelector("svg.animate-spin")).not.toBeInTheDocument()
+
+    resolve()
+    await waitFor(() => expect(accept).toBeEnabled())
+  })
+
   it("lists several invitations, each answered on its own", async () => {
     const onRespond = vi.fn(async () => {})
     render(

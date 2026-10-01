@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -188,6 +189,7 @@ export function ProfileEditForm() {
         <PowerPaceFields control={form.control} />
 
         <Button type="submit" disabled={submitting}>
+          {submitting && <Loader2 className="animate-spin" />}
           {submitting ? "Saving..." : "Save changes"}
         </Button>
       </form>

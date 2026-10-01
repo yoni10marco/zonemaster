@@ -1,5 +1,7 @@
 "use client"
 
+import { Loader2 } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -44,6 +46,7 @@ export function ConfirmDialog({
             Cancel
           </Button>
           <Button variant={destructive ? "destructive" : "default"} onClick={onConfirm} disabled={busy}>
+            {busy && <Loader2 className="animate-spin" />}
             {confirmLabel}
           </Button>
         </DialogFooter>

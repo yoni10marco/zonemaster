@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Check, LogOut, Send, Users } from "lucide-react"
+import { Check, Loader2, LogOut, Send, Users } from "lucide-react"
 
 import { Avatar } from "@/components/friends/Avatar"
 import { ConfirmDialog } from "@/components/friends/ConfirmDialog"
@@ -150,7 +150,7 @@ export function TogetherSection({
         <div className="flex flex-wrap gap-2">
           {canInvite && onInvite && pickable.length > 0 && (
             <Button type="button" size="sm" disabled={busy || selected.length === 0} onClick={onInvite}>
-              <Send />
+              {busy ? <Loader2 className="animate-spin" /> : <Send />}
               Send invitation
             </Button>
           )}

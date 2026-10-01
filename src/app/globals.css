@@ -105,3 +105,14 @@
     overflow-x: clip;
   }
 }
+
+/* Motion-sensitive users get none of the animate-in/out entrances this app
+   uses (dialogs, page transitions, the loading spinner) — an instant swap
+   instead, never a spin or a slide. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in,
+  .animate-out,
+  .animate-spin {
+    animation: none !important;
+  }
+}

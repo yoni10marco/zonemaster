@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
@@ -65,19 +66,21 @@ export function SignupForm() {
     })
 
     if (error) {
-      toast.error(error.message)
       setSubmitting(false)
+      toast.error(error.message)
       return
     }
 
-    setSubmitting(false)
-
     if (!data.session) {
       // Email confirmation is required before a session exists.
+      setSubmitting(false)
       setPendingConfirmation(true)
       return
     }
 
+    // Submitting stays true here: the form is about to be replaced by the
+    // calendar page, so resetting it first would only flash the button back
+    // to "Create account" for an instant before that navigation lands.
     toast.success("Welcome to Zone Master!")
     router.push("/calendar")
     router.refresh()
@@ -160,6 +163,7 @@ export function SignupForm() {
         <ProfileFields control={form.control} />
 
         <Button type="submit" className="w-full" disabled={submitting}>
+          {submitting && <Loader2 className="animate-spin" />}
           {submitting ? "Creating account..." : "Create account"}
         </Button>
       </form>

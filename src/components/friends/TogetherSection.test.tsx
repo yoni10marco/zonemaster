@@ -69,6 +69,13 @@ describe("TogetherSection: an existing workout that is not shared yet", () => {
     expect(onInvite).toHaveBeenCalledTimes(1)
     expect(screen.queryByRole("button", { name: /leave this session/i })).not.toBeInTheDocument()
   })
+
+  it("shows a spinner on Send invitation while it is busy", () => {
+    setup({ isEditing: true, selected: ["c"], busy: true })
+    const button = screen.getByRole("button", { name: /send invitation/i })
+    expect(button).toBeDisabled()
+    expect(button.querySelector("svg.animate-spin")).toBeInTheDocument()
+  })
 })
 
 describe("TogetherSection: a shared session you started", () => {

@@ -80,3 +80,67 @@ describe("parsePlan", () => {
     expect(() => parsePlan(JSON.stringify({ summary: "x" }), WEEK)).toThrow(/unexpected format/)
   })
 })
+
+describe("parsePlan: multi-sport (brick) drafts", () => {
+  it("is an empty array for an ordinary, single-sport draft", () => {
+    const [draft] = plan([{ date: "2026-09-22", discipline: "run", durationMinutes: 30, title: "Easy run" }]).drafts
+    expect(draft.segments).toEqual([])
+  })
+
+  it("keeps a valid extra leg", () => {
+    const [draft] = plan([
+      {
+        date: "2026-09-22",
+        discipline: "bike",
+        durationMinutes: 60,
+        title: "Brick",
+        segments: [{ discipline: "run", durationMinutes: 20, zone: "z3" }],
+      },
+    ]).drafts
+    expect(draft.segments).toEqual([{ discipline: "run", durationMinutes: 20, distanceKm: null, zone: "z3" }])
+  })
+
+  it("drops a leg with neither duration nor distance, and one with a bad discipline, without dropping the draft", () => {
+    const [draft] = plan([
+      {
+        date: "2026-09-22",
+        discipline: "bike",
+        durationMinutes: 60,
+        title: "Brick",
+        segments: [{ discipline: "run" }, { discipline: "unicycle", durationMinutes: 20 }, { discipline: "swim", distanceKm: 1 }],
+      },
+    ]).drafts
+    expect(draft.segments).toEqual([{ discipline: "swim", durationMinutes: null, distanceKm: 1, zone: null }])
+  })
+
+  it("caps extra legs at the database's maximum", () => {
+    const [draft] = plan([
+      {
+        date: "2026-09-22",
+        discipline: "bike",
+        durationMinutes: 60,
+        title: "Brick",
+        segments: Array.from({ length: 6 }, () => ({ discipline: "run", durationMinutes: 10 })),
+      },
+    ]).drafts
+    expect(draft.segments).toHaveLength(4)
+  })
+
+  it("normalizes each leg's distance the same way the main workout's is (swim meters, run/bike caps)", () => {
+    const [draft] = plan([
+      {
+        date: "2026-09-22",
+        discipline: "run",
+        durationMinutes: 40,
+        title: "Brick",
+        segments: [{ discipline: "swim", distanceKm: 1500 }],
+      },
+    ]).drafts
+    expect(draft.segments[0].distanceKm).toBe(1.5)
+  })
+
+  it("tolerates a draft with no segments field at all (an ordinary workout)", () => {
+    const [draft] = plan([{ date: "2026-09-22", discipline: "run", durationMinutes: 30, title: "r" }]).drafts
+    expect(draft.segments).toEqual([])
+  })
+})

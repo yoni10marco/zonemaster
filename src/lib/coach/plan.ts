@@ -3,8 +3,17 @@ import { z } from "zod"
 
 import { DISCIPLINES, DISCIPLINE_LABELS, INTENSITY_ZONES, type Discipline } from "@/lib/types/domain"
 import { toISODate } from "@/lib/utils/dates"
+import { MAX_EXTRA_SEGMENTS } from "@/lib/utils/segments"
 
 const MAX_DRAFTS = 14
+
+/** A further leg of a multi-sport ("brick") draft, e.g. the run after a bike. */
+export type DraftSegment = {
+  discipline: Discipline
+  durationMinutes: number | null
+  distanceKm: number | null
+  zone: (typeof INTENSITY_ZONES)[number] | null
+}
 
 export type WorkoutDraft = {
   date: string
@@ -14,6 +23,8 @@ export type WorkoutDraft = {
   zone: (typeof INTENSITY_ZONES)[number] | null
   title: string
   notes: string | null
+  /** Extra legs beyond the first, for a multi-sport workout — empty for an ordinary one. */
+  segments: DraftSegment[]
 }
 
 // Gemini response schema (OpenAPI subset). It steers the model; the zod
@@ -34,6 +45,23 @@ export const PLAN_RESPONSE_SCHEMA = {
           zone: { type: "STRING", enum: [...INTENSITY_ZONES], nullable: true },
           title: { type: "STRING" },
           notes: { type: "STRING", nullable: true },
+          // Only for a genuine multi-sport ("brick") session, e.g. bike then
+          // run: the legs after the first one, in order. Omit entirely for an
+          // ordinary single-sport workout.
+          segments: {
+            type: "ARRAY",
+            nullable: true,
+            items: {
+              type: "OBJECT",
+              properties: {
+                discipline: { type: "STRING", enum: [...DISCIPLINES] },
+                durationMinutes: { type: "INTEGER", nullable: true },
+                distanceKm: { type: "NUMBER", nullable: true },
+                zone: { type: "STRING", enum: [...INTENSITY_ZONES], nullable: true },
+              },
+              required: ["discipline"],
+            },
+          },
         },
         required: ["date", "discipline", "title"],
       },
@@ -41,6 +69,13 @@ export const PLAN_RESPONSE_SCHEMA = {
   },
   required: ["summary", "drafts"],
 }
+
+const rawSegmentSchema = z.object({
+  discipline: z.enum(DISCIPLINES),
+  durationMinutes: z.number().nullish(),
+  distanceKm: z.number().nullish(),
+  zone: z.enum(INTENSITY_ZONES).nullish(),
+})
 
 const rawDraftSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -50,6 +85,7 @@ const rawDraftSchema = z.object({
   zone: z.enum(INTENSITY_ZONES).nullish(),
   title: z.string().nullish(),
   notes: z.string().nullish(),
+  segments: z.array(z.unknown()).nullish(),
 })
 
 const rawPlanSchema = z.object({
@@ -109,6 +145,25 @@ export function parsePlan(rawText: string, weekStart: string): ParsedPlan {
     // The database requires a duration or a distance on every planned workout.
     if (durationMinutes === null && distanceKm === null) continue
 
+    const segments: DraftSegment[] = []
+    for (const raw of d.segments ?? []) {
+      if (segments.length >= MAX_EXTRA_SEGMENTS) break
+      const seg = rawSegmentSchema.safeParse(raw)
+      if (!seg.success) continue
+      const segDuration =
+        seg.data.durationMinutes != null && seg.data.durationMinutes >= 5 && seg.data.durationMinutes <= 480
+          ? Math.round(seg.data.durationMinutes)
+          : null
+      const segDistance = normalizeDistanceKm(seg.data.distanceKm, seg.data.discipline)
+      if (segDuration === null && segDistance === null) continue
+      segments.push({
+        discipline: seg.data.discipline,
+        durationMinutes: segDuration,
+        distanceKm: segDistance,
+        zone: seg.data.zone ?? null,
+      })
+    }
+
     drafts.push({
       date: d.date,
       discipline: d.discipline,
@@ -117,6 +172,7 @@ export function parsePlan(rawText: string, weekStart: string): ParsedPlan {
       zone: d.zone ?? null,
       title: (d.title?.trim() || DISCIPLINE_LABELS[d.discipline]).slice(0, 120),
       notes: d.notes?.trim() ? d.notes.trim().slice(0, 500) : null,
+      segments,
     })
   }
 

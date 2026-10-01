@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Copy, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
+import { DisciplineIcon, ZoneDot } from "@/components/calendar/DisciplineIcon"
 import {
   ExtraSegmentsFields,
   nextSegmentKey,
@@ -65,6 +66,7 @@ import {
 import { REPEAT_WEEK_OPTIONS, repeatDates } from "@/lib/utils/repeat"
 import { buildExtraSegments, parseExtraPlannedSegments } from "@/lib/utils/segments"
 import { zoneTarget } from "@/lib/utils/training-zones"
+import { NO_ZONE_VALUE, zoneFromSelectValue, zoneSelectValue } from "@/lib/utils/zone-select"
 import {
   parseOptionalNumber,
   plannedWorkoutSchema,
@@ -319,78 +321,22 @@ export function WorkoutFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <DisciplineIcon discipline={discipline} className="size-6" />
             {isEditing ? "Edit workout" : prefill ? "Duplicate workout" : "Add workout"}
           </DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="targetDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Date</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="discipline"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Discipline</FormLabel>
-                  <Select
-                    onValueChange={(next) => {
-                      const previous = form.getValues("discipline") as Discipline
-                      field.onChange(next)
-                      // Switching to/from swim changes the unit, so convert a value
-                      // that is already typed instead of silently reinterpreting it.
-                      const typed = parseOptionalNumber(form.getValues("plannedDistanceKm"))
-                      if (typed !== null && usesMeters(previous) !== usesMeters(next as Discipline)) {
-                        const km = displayValueToKm(typed, previous)
-                        form.setValue("plannedDistanceKm", kmToDisplayValue(km, next as Discipline).toString())
-                      }
-                    }}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {DISCIPLINES.map((d) => (
-                        <SelectItem key={d} value={d}>
-                          {DISCIPLINE_LABELS[d]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4 rounded-xl border p-3">
               <FormField
                 control={form.control}
-                name="plannedDurationMinutes"
+                name="targetDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Duration (min)</FormLabel>
+                    <FormLabel>Date</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={field.value ?? ""}
-                        onChange={(e) => field.onChange(e.target.value)}
-                      />
+                      <Input type="date" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -399,18 +345,137 @@ export function WorkoutFormDialog({
 
               <FormField
                 control={form.control}
-                name="plannedDistanceKm"
+                name="discipline"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Distance ({distanceUnit(discipline)})</FormLabel>
+                    <FormLabel>Discipline</FormLabel>
+                    <Select
+                      onValueChange={(next) => {
+                        const previous = form.getValues("discipline") as Discipline
+                        field.onChange(next)
+                        // Switching to/from swim changes the unit, so convert a value
+                        // that is already typed instead of silently reinterpreting it.
+                        const typed = parseOptionalNumber(form.getValues("plannedDistanceKm"))
+                        if (typed !== null && usesMeters(previous) !== usesMeters(next as Discipline)) {
+                          const km = displayValueToKm(typed, previous)
+                          form.setValue("plannedDistanceKm", kmToDisplayValue(km, next as Discipline).toString())
+                        }
+                      }}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {DISCIPLINES.map((d) => (
+                          <SelectItem key={d} value={d}>
+                            <DisciplineIcon discipline={d} />
+                            {DISCIPLINE_LABELS[d]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="plannedDurationMinutes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Duration (min)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={field.value ?? ""}
+                          onChange={(e) => field.onChange(e.target.value)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="plannedDistanceKm"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Distance ({distanceUnit(discipline)})</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          step={usesMeters(discipline) ? "1" : "0.1"}
+                          value={field.value ?? ""}
+                          onChange={(e) => field.onChange(e.target.value)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="targetZone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Target zone (optional)</FormLabel>
+                    <Select
+                      onValueChange={(next) => field.onChange(zoneFromSelectValue(next))}
+                      value={zoneSelectValue(field.value)}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="No specific zone" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={NO_ZONE_VALUE}>No specific zone</SelectItem>
+                        {INTENSITY_ZONES.map((z) => (
+                          <SelectItem key={z} value={z}>
+                            <ZoneDot zone={z} />
+                            {ZONE_LABELS[z]}
+                            {zoneSuffix(z)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title (optional)</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        min={0}
-                        step={usesMeters(discipline) ? "1" : "0.1"}
-                        value={field.value ?? ""}
-                        onChange={(e) => field.onChange(e.target.value)}
-                      />
+                      <Input placeholder="e.g. Long run" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes (optional)</FormLabel>
+                    <FormControl>
+                      <Textarea rows={3} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -418,66 +483,12 @@ export function WorkoutFormDialog({
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="targetZone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Target zone (optional)</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || ""}>
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="No specific zone" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {INTENSITY_ZONES.map((z) => (
-                        <SelectItem key={z} value={z}>
-                          {ZONE_LABELS[z]}
-                          {zoneSuffix(z)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <ExtraSegmentsFields
               legs={extraLegs}
               onChange={setExtraLegs}
               zoneGuide={zoneGuide}
               disabled={submitting}
               showIncompleteError={showLegsError}
-            />
-
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title (optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. Long run" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes (optional)</FormLabel>
-                  <FormControl>
-                    <Textarea rows={3} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
             />
 
             <FormField

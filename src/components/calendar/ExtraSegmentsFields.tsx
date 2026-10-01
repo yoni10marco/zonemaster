@@ -2,6 +2,7 @@
 
 import { Plus, X } from "lucide-react"
 
+import { DisciplineIcon, ZoneDot } from "@/components/calendar/DisciplineIcon"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -13,10 +14,13 @@ import {
   type Discipline,
   type IntensityZone,
 } from "@/lib/types/domain"
+import { cn } from "@/lib/utils"
 import { distanceUnit, usesMeters } from "@/lib/utils/distance"
+import { DISCIPLINE_STYLES } from "@/lib/utils/discipline-style"
 import { MAX_EXTRA_SEGMENTS } from "@/lib/utils/segments"
 import type { ZoneGuide } from "@/lib/utils/training-zones"
 import { zoneTarget } from "@/lib/utils/training-zones"
+import { NO_ZONE_VALUE, zoneFromSelectValue, zoneSelectValue } from "@/lib/utils/zone-select"
 
 /**
  * One extra leg's editable form state. Kept outside react-hook-form, the same
@@ -85,9 +89,12 @@ export function ExtraSegmentsFields({
       </div>
 
       {legs.map((leg, index) => (
-        <div key={leg.key} className="space-y-2 rounded-md bg-muted/40 p-2">
+        <div key={leg.key} className={cn("space-y-2 rounded-md p-2", DISCIPLINE_STYLES[leg.discipline].card)}>
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">Leg {index + 2}</span>
+            <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <DisciplineIcon discipline={leg.discipline} />
+              Leg {index + 2}
+            </span>
             <button
               type="button"
               aria-label={`Remove leg ${index + 2}`}
@@ -109,6 +116,7 @@ export function ExtraSegmentsFields({
             <SelectContent>
               {DISCIPLINES.map((d) => (
                 <SelectItem key={d} value={d}>
+                  <DisciplineIcon discipline={d} />
                   {DISCIPLINE_LABELS[d]}
                 </SelectItem>
               ))}
@@ -136,18 +144,20 @@ export function ExtraSegmentsFields({
             />
           </div>
           <Select
-            value={leg.zone}
-            onValueChange={(next) => update(leg.key, { zone: next as IntensityZone })}
+            value={zoneSelectValue(leg.zone)}
+            onValueChange={(next) => update(leg.key, { zone: zoneFromSelectValue(next) })}
             disabled={disabled}
           >
             <SelectTrigger className="w-full" aria-label={`Target zone for leg ${index + 2}`}>
               <SelectValue placeholder="No specific zone" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value={NO_ZONE_VALUE}>No specific zone</SelectItem>
               {INTENSITY_ZONES.map((z) => {
                 const target = zoneTarget(zoneGuide, leg.discipline, z)
                 return (
                   <SelectItem key={z} value={z}>
+                    <ZoneDot zone={z} />
                     {ZONE_LABELS[z]}
                     {target ? ` · ${target}` : ""}
                   </SelectItem>

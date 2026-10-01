@@ -14,6 +14,13 @@ export const maxDuration = 60
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 
+const previousSegmentSchema = z.object({
+  discipline: z.enum(DISCIPLINES),
+  durationMinutes: z.number().nullish(),
+  distanceKm: z.number().nullish(),
+  zone: z.enum(INTENSITY_ZONES).nullish(),
+})
+
 // A draft the coach proposed earlier, sent back when the athlete asks for changes.
 const previousDraftSchema = z.object({
   date: isoDate,
@@ -22,6 +29,7 @@ const previousDraftSchema = z.object({
   distanceKm: z.number().nullish(),
   zone: z.enum(INTENSITY_ZONES).nullish(),
   title: z.string().max(120),
+  segments: z.array(previousSegmentSchema).max(4).nullish(),
 })
 
 const bodySchema = z.object({
@@ -32,14 +40,19 @@ const bodySchema = z.object({
   previous: z.array(previousDraftSchema).max(14).optional(),
 })
 
+function describeLeg(d: { discipline: string; durationMinutes?: number | null; distanceKm?: number | null; zone?: string | null }): string {
+  const parts = [d.discipline]
+  if (d.durationMinutes) parts.push(`${d.durationMinutes} min`)
+  if (d.distanceKm) parts.push(`${d.distanceKm} km`)
+  if (d.zone) parts.push(d.zone.toUpperCase())
+  return parts.join(", ")
+}
+
 function describePrevious(drafts: z.infer<typeof previousDraftSchema>[]): string {
   return drafts
     .map((d) => {
-      const parts = [d.date, d.discipline]
-      if (d.durationMinutes) parts.push(`${d.durationMinutes} min`)
-      if (d.distanceKm) parts.push(`${d.distanceKm} km`)
-      if (d.zone) parts.push(d.zone.toUpperCase())
-      return `- ${parts.join(", ")}: ${d.title.replace(/\s+/g, " ")}`
+      const legs = [describeLeg(d), ...(d.segments ?? []).map(describeLeg)].join(" + ")
+      return `- ${d.date}, ${legs}: ${d.title.replace(/\s+/g, " ")}`
     })
     .join("\n")
 }
@@ -91,6 +104,9 @@ export async function POST(request: NextRequest) {
             "Rules: every date must fall inside that week; use only the disciplines swim, bike, run, strength or other;",
             "give each workout a durationMinutes and/or distanceKm (always kilometers, also for swims: a 1500 m swim is 1.5); use zones z1 to z5 for intensity; keep a sensible mix and at least one rest day;",
             "do not repeat sessions that are already planned in that week (see the athlete data), add complementary ones instead.",
+            "A workout may be a multi-sport ('brick') session, like a bike leg straight into a run — but only when that genuinely suits the week; most workouts have no segments at all, and never invent one unless asked to. The draft's own discipline/durationMinutes/distanceKm/zone/title describe ONLY the first leg (e.g. the bike part) — never a summary, a title for the whole session, or a sum of both legs. Put each FURTHER leg as its own object in a 'segments' array (up to 4), each with its own discipline and its own durationMinutes/distanceKm/zone. Never repeat the first leg inside segments, and never add the legs' durations together anywhere — each number in the whole draft (top-level or in a segment) is that one leg's own number, nothing else. A 60-minute bike straight into a 15-minute run, for example, is exactly this shape, with nothing else in segments and no change to any other field:\n" +
+              '{"date": "2026-01-05", "discipline": "bike", "durationMinutes": 60, "title": "Brick: bike + run", "segments": [{"discipline": "run", "durationMinutes": 15}]}' +
+              "\nTwo unrelated workouts on the same day stay as two separate drafts, with no segments on either.",
             focus ? `The athlete's focus for this week: ${focus}` : "",
             isRevision
               ? `\nYou proposed this plan earlier:\n${describePrevious(previous!)}\n\nThe athlete asks for a change: "${feedback}"\nReturn a complete revised plan for the same week that applies EVERY part of this request (for example, if asked to add a session on a day, that session must be in the new plan; if asked to shorten something, shorten it) and keeps what already works.`

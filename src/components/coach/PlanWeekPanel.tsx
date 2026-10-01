@@ -62,6 +62,7 @@ export function PlanWeekPanel() {
                   distanceKm: draft.distanceKm,
                   zone: draft.zone,
                   title: draft.title,
+                  segments: draft.segments,
                 })),
               }
             : {}),
@@ -99,6 +100,15 @@ export function PlanWeekPanel() {
         target_zone: d.zone,
         title: d.title,
         notes: d.notes,
+        extra_segments:
+          d.segments.length > 0
+            ? d.segments.map((s) => ({
+                discipline: s.discipline,
+                planned_duration_minutes: s.durationMinutes,
+                planned_distance_km: s.distanceKm,
+                target_zone: s.zone,
+              }))
+            : null,
       }))
     )
     if (error) throw new Error(error.message)
@@ -208,12 +218,16 @@ export function PlanWeekPanel() {
             const d = item.draft
             const style = DISCIPLINE_STYLES[d.discipline]
             const Icon = DISCIPLINE_ICONS[d.discipline]
-            const zoneText = d.zone ? zoneTarget(zoneGuide, d.discipline, d.zone) : null
-            const details = [
-              d.durationMinutes ? `${d.durationMinutes} min` : null,
-              d.distanceKm ? formatDistance(d.distanceKm, d.discipline) : null,
-              d.zone ? `${ZONE_LABELS[d.zone]}${zoneText ? ` (${zoneText})` : ""}` : null,
-            ].filter(Boolean)
+            const multiSport = d.segments.length > 0
+            const legDetails = (leg: Pick<WorkoutDraft, "discipline" | "durationMinutes" | "distanceKm" | "zone">) => {
+              const zoneText = leg.zone ? zoneTarget(zoneGuide, leg.discipline, leg.zone) : null
+              return [
+                leg.durationMinutes ? `${leg.durationMinutes} min` : null,
+                leg.distanceKm ? formatDistance(leg.distanceKm, leg.discipline) : null,
+                leg.zone ? `${ZONE_LABELS[leg.zone]}${zoneText ? ` (${zoneText})` : ""}` : null,
+              ].filter(Boolean)
+            }
+            const details = legDetails(d)
 
             return (
               <div
@@ -225,12 +239,25 @@ export function PlanWeekPanel() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className={cn("text-xs font-semibold", style.text)}>
-                    {format(parseISO(d.date), "EEE d MMM")} · {DISCIPLINE_LABELS[d.discipline]}
+                    {format(parseISO(d.date), "EEE d MMM")} ·{" "}
+                    {multiSport
+                      ? [d.discipline, ...d.segments.map((s) => s.discipline)].map((dd) => DISCIPLINE_LABELS[dd]).join(" + ")
+                      : DISCIPLINE_LABELS[d.discipline]}
                   </p>
                   <p className="truncate text-sm font-semibold">{d.title}</p>
                   {details.length > 0 && (
                     <p className="text-xs text-muted-foreground">{details.join(" · ")}</p>
                   )}
+                  {d.segments.map((leg, i) => {
+                    const legStyle = DISCIPLINE_STYLES[leg.discipline]
+                    const legDet = legDetails(leg)
+                    return (
+                      <p key={i} className="text-xs text-muted-foreground">
+                        <span className={cn("font-medium", legStyle.text)}>{DISCIPLINE_LABELS[leg.discipline]}: </span>
+                        {legDet.length > 0 ? legDet.join(" · ") : "—"}
+                      </p>
+                    )
+                  })}
                   {d.notes && <p className="mt-1 text-xs text-muted-foreground">{d.notes}</p>}
                 </div>
                 <div className="flex shrink-0 gap-1">

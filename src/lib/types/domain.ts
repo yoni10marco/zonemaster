@@ -44,3 +44,14 @@ export const ZONE_LABELS: Record<IntensityZone, string> = {
   z4: "Z4 · Threshold",
   z5: "Z5 · VO2 Max",
 }
+
+// Z1 easy -> Z5 max. The same five colors the zone-dial logo is drawn with
+// (src/components/layout/ZoneLogo.tsx), reused anywhere else a zone needs a
+// color swatch (e.g. the zone picker).
+export const ZONE_COLORS: Record<IntensityZone, string> = {
+  z1: "#0ea5e9",
+  z2: "#10b981",
+  z3: "#eab308",
+  z4: "#f97316",
+  z5: "#ef4444",
+}

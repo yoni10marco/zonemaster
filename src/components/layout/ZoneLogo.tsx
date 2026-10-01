@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils"
+import { INTENSITY_ZONES, ZONE_COLORS } from "@/lib/types/domain"
 
 // The same five-zone heart-rate dial as the app icon (src/app/icon.svg), drawn
 // without its tile so it sits directly on the page. The needle and hub follow
@@ -7,7 +8,7 @@ import { cn } from "@/lib/utils"
 const CENTER = 256
 const RADIUS = 150
 const STROKE = 60
-const ZONE_COLORS = ["#0ea5e9", "#10b981", "#eab308", "#f97316", "#ef4444"] as const // Z1 easy -> Z5 max
+const ZONE_COLOR_LIST = INTENSITY_ZONES.map((z) => ZONE_COLORS[z]) // Z1 easy -> Z5 max
 const START_DEG = 135
 const SWEEP_DEG = 270
 const GAP_DEG = 5
@@ -17,9 +18,9 @@ function point(deg: number, radius: number): [number, number] {
   return [CENTER + radius * Math.cos(rad), CENTER + radius * Math.sin(rad)]
 }
 
-const zoneStep = SWEEP_DEG / ZONE_COLORS.length
+const zoneStep = SWEEP_DEG / ZONE_COLOR_LIST.length
 
-const ZONE_PATHS = ZONE_COLORS.map((color, i) => {
+const ZONE_PATHS = ZONE_COLOR_LIST.map((color, i) => {
   const [x0, y0] = point(START_DEG + zoneStep * i + GAP_DEG / 2, RADIUS)
   const [x1, y1] = point(START_DEG + zoneStep * (i + 1) - GAP_DEG / 2, RADIUS)
   return { color, d: `M${x0.toFixed(2)} ${y0.toFixed(2)} A${RADIUS} ${RADIUS} 0 0 1 ${x1.toFixed(2)} ${y1.toFixed(2)}` }

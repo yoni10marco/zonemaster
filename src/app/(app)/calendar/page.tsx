@@ -44,6 +44,7 @@ import {
   dndScreenReaderInstructions,
 } from "@/lib/utils/dnd-keyboard"
 import { copyFields } from "@/lib/utils/repeat"
+import { parseExtraPlannedSegments } from "@/lib/utils/segments"
 
 type CalendarView = "week" | "month"
 
@@ -160,12 +161,22 @@ export default function CalendarPage() {
   async function handleMarkDone(workout: PlannedWorkout) {
     if (completionByPlannedId.has(workout.id)) return // already completed
     try {
+      // A multi-sport (brick) workout's extra legs are marked done exactly as
+      // planned too, same as leg 1 already was.
+      const extraLegs = parseExtraPlannedSegments(workout.extra_segments).map((seg) => ({
+        discipline: seg.discipline,
+        actual_duration_minutes: seg.planned_duration_minutes,
+        actual_distance_km: seg.planned_distance_km,
+        avg_heart_rate: null,
+        avg_pace_or_power: null,
+      }))
       const created = await logCompletion({
         planned_workout_id: workout.id,
         execution_date: workout.target_date,
         discipline: workout.discipline,
         actual_duration_minutes: workout.planned_duration_minutes,
         actual_distance_km: workout.planned_distance_km,
+        extra_segments: (extraLegs.length > 0 ? extraLegs : null) as CompletedWorkout["extra_segments"],
         rpe: null,
         notes: null,
         source: "manual",
@@ -204,6 +215,7 @@ export default function CalendarPage() {
               actual_distance_km: completion.actual_distance_km,
               avg_heart_rate: completion.avg_heart_rate,
               avg_pace_or_power: completion.avg_pace_or_power,
+              extra_segments: completion.extra_segments,
               external_activity_id: completion.external_activity_id,
               rpe: completion.rpe,
               notes: completion.notes,

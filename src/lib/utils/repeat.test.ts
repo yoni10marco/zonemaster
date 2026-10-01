@@ -17,6 +17,7 @@ function workout(overrides: Partial<PlannedWorkout> = {}): PlannedWorkout {
     planned_distance_km: null,
     target_zone: "z2",
     shared_session_id: null,
+    extra_segments: null,
     ...overrides,
   }
 }
@@ -53,9 +54,16 @@ describe("copyFields", () => {
       planned_duration_minutes: 45,
       planned_distance_km: null,
       target_zone: "z2",
+      extra_segments: null,
     })
     expect(copy).not.toHaveProperty("id")
     expect(copy).not.toHaveProperty("user_id")
+  })
+
+  it("carries a multi-sport workout's extra legs along with it", () => {
+    const extra = [{ discipline: "run", planned_duration_minutes: 20, planned_distance_km: null, target_zone: null }]
+    const copy = copyFields(workout({ extra_segments: extra }), "2026-09-21")
+    expect(copy.extra_segments).toEqual(extra)
   })
 })
 
@@ -91,5 +99,12 @@ describe("shiftWorkouts", () => {
 
   it("returns nothing for an empty source", () => {
     expect(shiftWorkouts([], [], 7)).toEqual([])
+  })
+
+  it("treats a brick workout as different from an otherwise-identical plain one", () => {
+    const extra = [{ discipline: "run", planned_duration_minutes: 20, planned_distance_km: null, target_zone: null }]
+    const brick = [workout({ id: 1, target_date: "2026-09-14", discipline: "bike", extra_segments: extra })]
+    const existingPlainBike = [workout({ id: 50, target_date: "2026-09-21", discipline: "bike" })]
+    expect(shiftWorkouts(brick, existingPlainBike, 7)).toHaveLength(1)
   })
 })

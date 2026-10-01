@@ -49,6 +49,7 @@ function workout(overrides: Partial<PlannedWorkout> = {}): PlannedWorkout {
     planned_distance_km: null,
     target_zone: null,
     shared_session_id: null,
+    extra_segments: null,
     ...overrides,
   }
 }
@@ -97,6 +98,58 @@ beforeEach(() => {
   createSharedSession.mockReset().mockResolvedValue(1)
   inviteToSharedSession.mockReset().mockResolvedValue(undefined)
   leaveSharedSession.mockReset().mockResolvedValue(undefined)
+})
+
+describe("WorkoutFormDialog: does not double-submit", () => {
+  // Resolves on demand, so a click mid-save can be simulated before the first save finishes.
+  function deferred<T>() {
+    let resolve!: (value: T) => void
+    const promise = new Promise<T>((r) => (resolve = r))
+    return { promise, resolve }
+  }
+
+  it("a second click while adding a workout does not create it twice", async () => {
+    const saved = deferred<{ id: number }>()
+    const { m, user } = setup()
+    m.createWorkout.mockReturnValue(saved.promise)
+    await user.type(screen.getByLabelText("Duration (min)"), "30")
+
+    const button = screen.getByRole("button", { name: "Add workout" })
+    await user.click(button)
+    await user.click(button) // the accidental second tap
+    expect(button).toBeDisabled()
+
+    saved.resolve({ id: 99 })
+    await waitFor(() => expect(m.createWorkout).toHaveBeenCalledTimes(1))
+  })
+
+  it("a second click while saving an edit does not update it twice", async () => {
+    const saved = deferred<Record<string, never>>()
+    const { m, user } = setup({ workout: workout() })
+    m.updateWorkout.mockReturnValue(saved.promise)
+
+    const button = screen.getByRole("button", { name: "Save changes" })
+    await user.click(button)
+    await user.click(button)
+    expect(button).toBeDisabled()
+
+    saved.resolve({})
+    await waitFor(() => expect(m.updateWorkout).toHaveBeenCalledTimes(1))
+  })
+
+  it("a second click while deleting does not delete it twice", async () => {
+    const deleted = deferred<void>()
+    const { m, user } = setup({ workout: workout() })
+    m.deleteWorkout.mockReturnValue(deleted.promise)
+
+    const button = screen.getByRole("button", { name: "Delete" })
+    await user.click(button)
+    await user.click(button)
+    expect(button).toBeDisabled()
+
+    deleted.resolve()
+    await waitFor(() => expect(m.deleteWorkout).toHaveBeenCalledTimes(1))
+  })
 })
 
 describe("WorkoutFormDialog: adding a workout together with friends", () => {
@@ -199,5 +252,69 @@ describe("WorkoutFormDialog: an existing workout", () => {
     await user.click(screen.getByRole("button", { name: "Delete" }))
     await waitFor(() => expect(m.deleteWorkout).toHaveBeenCalledWith(12))
     expect(onDeleted).toHaveBeenCalledWith(expect.objectContaining({ id: 12 }))
+  })
+})
+
+describe("WorkoutFormDialog: multi-sport (brick) workouts", () => {
+  // A new leg defaults to "run", so these tests don't need to drive the
+  // discipline Select (a Radix combobox the jsdom test environment here isn't
+  // set up to click-interact with) — only the plain duration/distance inputs.
+  it("adds a workout with an extra leg", async () => {
+    const { m, user } = setup()
+    await user.type(screen.getByLabelText("Duration (min)"), "60")
+    await user.click(screen.getByRole("button", { name: "Add another sport" }))
+    expect(screen.getByLabelText("Discipline for leg 2")).toHaveTextContent("Run")
+    await user.type(screen.getByLabelText("Duration for leg 2"), "20")
+    await user.click(screen.getByRole("button", { name: "Add workout" }))
+
+    await waitFor(() => expect(m.createWorkout).toHaveBeenCalled())
+    expect(m.createWorkout).toHaveBeenCalledWith(
+      expect.objectContaining({
+        planned_duration_minutes: 60,
+        extra_segments: [{ discipline: "run", planned_duration_minutes: 20, planned_distance_km: null, target_zone: null }],
+      })
+    )
+  })
+
+  it("refuses to save a leg with neither duration nor distance, and explains why", async () => {
+    const { m, user } = setup()
+    await user.type(screen.getByLabelText("Duration (min)"), "60")
+    await user.click(screen.getByRole("button", { name: "Add another sport" }))
+    await user.click(screen.getByRole("button", { name: "Add workout" }))
+
+    expect(screen.getByText(/enter a duration or a distance for this leg/i)).toBeInTheDocument()
+    expect(m.createWorkout).not.toHaveBeenCalled()
+  })
+
+  it("removing a leg drops it from what gets saved", async () => {
+    const { m, user } = setup()
+    await user.type(screen.getByLabelText("Duration (min)"), "60")
+    await user.click(screen.getByRole("button", { name: "Add another sport" }))
+    await user.type(screen.getByLabelText("Duration for leg 2"), "20")
+    await user.click(screen.getByRole("button", { name: "Remove leg 2" }))
+    await user.click(screen.getByRole("button", { name: "Add workout" }))
+
+    await waitFor(() => expect(m.createWorkout).toHaveBeenCalled())
+    expect(m.createWorkout).toHaveBeenCalledWith(expect.objectContaining({ extra_segments: null }))
+  })
+
+  it("caps the number of extra legs at 4", async () => {
+    const { user } = setup()
+    await user.click(screen.getByRole("button", { name: "Add another sport" }))
+    for (let i = 0; i < 3; i++) {
+      await user.click(screen.getByRole("button", { name: "Add another leg" }))
+    }
+    expect(screen.getByRole("button", { name: "Add another leg" })).toBeDisabled()
+  })
+
+  it("prefills the extra legs when editing an existing brick workout", async () => {
+    const brick = workout({
+      discipline: "bike",
+      planned_duration_minutes: 60,
+      extra_segments: [{ discipline: "run", planned_duration_minutes: 20, planned_distance_km: null, target_zone: "z3" }],
+    })
+    setup({ workout: brick })
+    expect(await screen.findByLabelText("Discipline for leg 2")).toHaveTextContent("Run")
+    expect(screen.getByLabelText("Duration for leg 2")).toHaveValue(20)
   })
 })

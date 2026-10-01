@@ -7,6 +7,7 @@ import { describeSharing, overviewRowsToMap, togetherStats, type SessionMember }
 import { buildZoneGuide, describeZonesForCoach } from "@/lib/utils/training-zones"
 import { toISODate } from "@/lib/utils/dates"
 import { formatDistance } from "@/lib/utils/distance"
+import { completedLegs, plannedLegs } from "@/lib/utils/segments"
 
 type Completed = Tables<"completed_workouts">
 type Planned = Tables<"planned_workouts">
@@ -24,32 +25,43 @@ function clean(text: string | null, max = 60): string {
   return text.replace(/\s+/g, " ").trim().slice(0, max)
 }
 
+// A multi-sport ("brick") workout's legs are joined with " + ", e.g.
+// "Bike, 60 min + Run, 20 min" — one calendar entry, more than one discipline.
 function describeCompleted(c: Completed, sharing = ""): string {
-  const parts = [c.execution_date, DISCIPLINE_LABELS[c.discipline]]
-  if (c.actual_duration_minutes) parts.push(`${c.actual_duration_minutes} min`)
-  if (c.actual_distance_km) parts.push(formatDistance(c.actual_distance_km, c.discipline))
-  if (c.avg_heart_rate) parts.push(`avg HR ${c.avg_heart_rate}`)
-  if (c.avg_pace_or_power) parts.push(c.avg_pace_or_power)
-  if (c.rpe) parts.push(`RPE ${c.rpe}`)
-  return `- ${parts.join(", ")} [${c.planned_workout_id ? "planned" : "unplanned"}]${sharing}`
+  const legs = completedLegs(c).map((leg) => {
+    const parts = [DISCIPLINE_LABELS[leg.discipline]]
+    if (leg.actual_duration_minutes) parts.push(`${leg.actual_duration_minutes} min`)
+    if (leg.actual_distance_km) parts.push(formatDistance(leg.actual_distance_km, leg.discipline))
+    if (leg.avg_heart_rate) parts.push(`avg HR ${leg.avg_heart_rate}`)
+    if (leg.avg_pace_or_power) parts.push(leg.avg_pace_or_power)
+    return parts.join(", ")
+  })
+  const rpe = c.rpe ? `, RPE ${c.rpe}` : ""
+  return `- ${c.execution_date}, ${legs.join(" + ")}${rpe} [${c.planned_workout_id ? "planned" : "unplanned"}]${sharing}`
 }
 
 function describePlanned(p: Planned, sharing = ""): string {
-  const parts = [p.target_date, DISCIPLINE_LABELS[p.discipline]]
-  if (p.planned_duration_minutes) parts.push(`${p.planned_duration_minutes} min`)
-  if (p.planned_distance_km) parts.push(formatDistance(p.planned_distance_km, p.discipline))
-  if (p.target_zone) parts.push(p.target_zone.toUpperCase())
+  const legs = plannedLegs(p).map((leg) => {
+    const parts = [DISCIPLINE_LABELS[leg.discipline]]
+    if (leg.planned_duration_minutes) parts.push(`${leg.planned_duration_minutes} min`)
+    if (leg.planned_distance_km) parts.push(formatDistance(leg.planned_distance_km, leg.discipline))
+    if (leg.target_zone) parts.push(leg.target_zone.toUpperCase())
+    return parts.join(", ")
+  })
   const title = clean(p.title)
-  return `- ${parts.join(", ")}${title ? ` ("${title}")` : ""}${sharing}`
+  return `- ${p.target_date}, ${legs.join(" + ")}${title ? ` ("${title}")` : ""}${sharing}`
 }
 
+// A brick workout contributes to every discipline it touches (its own leg's
+// minutes/km only, never the whole session's), the same "+1 per discipline"
+// rule the dashboard uses.
 function disciplineTotals(completed: Completed[]): string {
   const lines = DISCIPLINES.map((d) => {
-    const rows = completed.filter((c) => c.discipline === d)
-    if (rows.length === 0) return null
-    const minutes = rows.reduce((sum, c) => sum + (c.actual_duration_minutes ?? 0), 0)
-    const km = rows.reduce((sum, c) => sum + (c.actual_distance_km ?? 0), 0)
-    return `- ${DISCIPLINE_LABELS[d]}: ${rows.length} sessions, ${minutes} min, ${formatDistance(km, d)}`
+    const legs = completed.flatMap((c) => completedLegs(c).filter((leg) => leg.discipline === d))
+    if (legs.length === 0) return null
+    const minutes = legs.reduce((sum, l) => sum + (l.actual_duration_minutes ?? 0), 0)
+    const km = legs.reduce((sum, l) => sum + (l.actual_distance_km ?? 0), 0)
+    return `- ${DISCIPLINE_LABELS[d]}: ${legs.length} sessions, ${minutes} min, ${formatDistance(km, d)}`
   }).filter((line): line is string => line !== null)
   return lines.length > 0 ? lines.join("\n") : "- none logged"
 }

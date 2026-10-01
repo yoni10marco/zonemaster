@@ -1,6 +1,7 @@
 import type { Discipline } from "@/lib/types/domain"
 import { DISCIPLINES } from "@/lib/types/domain"
 import type { Tables } from "@/lib/types/database.types"
+import { disciplinesOf } from "@/lib/utils/segments"
 
 type PlannedWorkout = Tables<"planned_workouts">
 type CompletedWorkout = Tables<"completed_workouts">
@@ -31,9 +32,19 @@ export type DisciplineActivityCount = {
 // mixed in — those units aren't comparable across disciplines (or even
 // within one, since the same discipline can be tracked either way from
 // session to session), so the dashboard shows "how many", not "how much".
+//
+// A multi-sport ("brick") completion counts once for EACH discipline it
+// covers — a single bike+run session adds 1 to bike and 1 to run — even
+// though it is still one row (one session) everywhere else, such as the
+// session-completion rate above.
 export function activityCounts(completed: CompletedWorkout[]): DisciplineActivityCount[] {
-  return DISCIPLINES.map((discipline) => ({
-    discipline,
-    count: completed.filter((w) => w.discipline === discipline).length,
-  })).filter((d) => d.count > 0)
+  const counts = new Map<Discipline, number>()
+  for (const w of completed) {
+    for (const discipline of disciplinesOf(w)) {
+      counts.set(discipline, (counts.get(discipline) ?? 0) + 1)
+    }
+  }
+  return DISCIPLINES.map((discipline) => ({ discipline, count: counts.get(discipline) ?? 0 })).filter(
+    (d) => d.count > 0
+  )
 }

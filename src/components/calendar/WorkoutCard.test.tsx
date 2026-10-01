@@ -25,6 +25,7 @@ function workout(overrides: Partial<PlannedWorkout> = {}): PlannedWorkout {
     planned_distance_km: 8,
     target_zone: "z2",
     shared_session_id: null,
+    extra_segments: null,
     ...overrides,
   }
 }
@@ -114,6 +115,37 @@ describe("WorkoutCard", () => {
     const card = screen.getByText("Easy run").closest("[data-workout-card]") as HTMLElement
     expect(card).toHaveAttribute("tabindex", "0")
     expect(card).toHaveAttribute("role", "button")
+  })
+})
+
+describe("WorkoutCard: multi-sport (brick) workouts", () => {
+  const brick = () =>
+    workout({
+      discipline: "bike",
+      planned_duration_minutes: 60,
+      planned_distance_km: 30,
+      target_zone: null,
+      extra_segments: [{ discipline: "run", planned_duration_minutes: 20, planned_distance_km: null, target_zone: "z3" }],
+    })
+
+  it("shows the combined discipline label and each leg's own details", () => {
+    renderCard({ workout: brick() })
+    expect(screen.getByText("Bike + Run")).toBeInTheDocument()
+    expect(screen.getByText(/60 min · 30 km/)).toBeInTheDocument()
+    expect(screen.getByText(/Run:/)).toBeInTheDocument()
+    expect(screen.getByText(/20 min/)).toBeInTheDocument()
+    expect(screen.getByText("Z3 · Tempo")).toBeInTheDocument()
+  })
+
+  it("shows each leg's own zone target once zones are known", () => {
+    renderCard({ workout: brick() }, { max_heart_rate: 190 })
+    // Leg 1 has no zone, so only the run leg's heart-rate range should show.
+    expect(screen.getAllByText(/bpm/)).toHaveLength(1)
+  })
+
+  it("an ordinary single-sport workout shows just its own discipline, as before", () => {
+    renderCard()
+    expect(screen.queryByText(/ \+ /)).not.toBeInTheDocument()
   })
 })
 

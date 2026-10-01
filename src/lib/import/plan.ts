@@ -1,6 +1,8 @@
 import type { Discipline, IntensityZone } from "@/lib/types/domain"
 import { activityDate, durationMinutes, externalActivityId } from "@/lib/import/summary"
 import type { ParsedActivity } from "@/lib/import/types"
+import { isMultiSport } from "@/lib/utils/segments"
+import type { Json } from "@/lib/types/database.types"
 
 /** The bits of a planned workout needed to decide whether an activity is that workout. */
 export type PlannedCandidate = {
@@ -10,6 +12,7 @@ export type PlannedCandidate = {
   discipline: Discipline
   planned_duration_minutes: number | null
   target_zone: IntensityZone | null
+  extra_segments: Json | null
 }
 
 export type ImportRow = {
@@ -29,6 +32,9 @@ export type ImportRow = {
 /**
  * The planned workout an activity most likely is: same day, same discipline,
  * not yet completed. With several candidates, the closest planned duration wins.
+ * A multi-sport ("brick") workout is never matched — one file's one activity
+ * isn't enough to say which of its legs it belongs to, so it is left for the
+ * person to tick off by hand and the file is saved as an extra activity.
  */
 export function matchPlanned(
   date: string,
@@ -40,7 +46,10 @@ export function matchPlanned(
   const gap = (w: PlannedCandidate) =>
     w.planned_duration_minutes === null ? Number.MAX_SAFE_INTEGER : Math.abs(w.planned_duration_minutes - minutes)
   const candidates = planned
-    .filter((w) => w.target_date === date && w.discipline === discipline && !taken.has(w.id))
+    .filter(
+      (w) =>
+        w.target_date === date && w.discipline === discipline && !taken.has(w.id) && !isMultiSport(w)
+    )
     .sort((a, b) => gap(a) - gap(b) || a.id - b.id)
   return candidates[0]?.id ?? null
 }

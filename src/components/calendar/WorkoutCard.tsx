@@ -12,6 +12,7 @@ import { useZoneGuide } from "@/components/calendar/ZoneGuideContext"
 import { describeOthers, summarizeSession } from "@/lib/friends/shared-session"
 import { cn } from "@/lib/utils"
 import { formatDistance } from "@/lib/utils/distance"
+import { plannedLegs } from "@/lib/utils/segments"
 import { zoneTarget } from "@/lib/utils/training-zones"
 
 type WorkoutCardProps = {
@@ -77,6 +78,10 @@ export function WorkoutCard({
 
   const style_ = DISCIPLINE_STYLES[workout.discipline]
   const Icon = DISCIPLINE_ICONS[workout.discipline]
+  // A multi-sport ("brick") workout has more than one leg: leg 1 is this
+  // row's own columns, the rest come from extra_segments.
+  const legs = plannedLegs(workout)
+  const multiSport = legs.length > 1
 
   return (
     // A native <button> can't contain the nested "mark done" <button> below,
@@ -131,7 +136,7 @@ export function WorkoutCard({
         <div className={cn("flex min-w-0 items-center gap-1 rounded px-1 py-0.5", style_.badge)}>
           <Icon className="size-3 shrink-0" />
           <span className="truncate text-[10px] font-medium">
-            {workout.title || DISCIPLINE_LABELS[workout.discipline]}
+            {workout.title || (multiSport ? legs.map((l) => DISCIPLINE_LABELS[l.discipline]).join(" + ") : DISCIPLINE_LABELS[workout.discipline])}
           </span>
           {isShared && <Users className="size-3 shrink-0" aria-label="Shared session" />}
           {completed && <CheckCircle2 className="ml-auto size-3.5 shrink-0 rounded-full bg-white text-green-600" />}
@@ -140,11 +145,30 @@ export function WorkoutCard({
         <>
           <div className="flex items-center justify-between gap-1">
             <div className="flex items-center gap-1.5">
-              <div className={cn("flex size-5 shrink-0 items-center justify-center rounded-full", style_.iconBg)}>
-                <Icon className="size-3" />
-              </div>
+              {multiSport ? (
+                <div className="flex -space-x-1">
+                  {legs.map((leg, i) => {
+                    const LegIcon = DISCIPLINE_ICONS[leg.discipline]
+                    return (
+                      <div
+                        key={i}
+                        className={cn(
+                          "flex size-5 shrink-0 items-center justify-center rounded-full ring-1 ring-background",
+                          DISCIPLINE_STYLES[leg.discipline].iconBg
+                        )}
+                      >
+                        <LegIcon className="size-3" />
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className={cn("flex size-5 shrink-0 items-center justify-center rounded-full", style_.iconBg)}>
+                  <Icon className="size-3" />
+                </div>
+              )}
               <span className={cn("text-[11px] font-bold tracking-wide", style_.text)}>
-                {DISCIPLINE_LABELS[workout.discipline]}
+                {multiSport ? legs.map((l) => DISCIPLINE_LABELS[l.discipline]).join(" + ") : DISCIPLINE_LABELS[workout.discipline]}
               </span>
             </div>
             {completed ? (
@@ -195,6 +219,27 @@ export function WorkoutCard({
               {zoneText && (
                 <span className="block text-[11px] tabular-nums">{zoneText}</span>
               )}
+            </div>
+          )}
+          {multiSport && (
+            <div className="mt-1 space-y-0.5 text-muted-foreground">
+              {legs.slice(1).map((leg, i) => {
+                const legZoneText = leg.target_zone ? zoneTarget(zoneGuide, leg.discipline, leg.target_zone) : null
+                return (
+                  <div key={i}>
+                    <span className="font-medium">{DISCIPLINE_LABELS[leg.discipline]}: </span>
+                    {leg.planned_duration_minutes ? `${leg.planned_duration_minutes} min` : null}
+                    {leg.planned_duration_minutes && leg.planned_distance_km ? " · " : null}
+                    {leg.planned_distance_km ? formatDistance(leg.planned_distance_km, leg.discipline) : null}
+                    {leg.target_zone && (
+                      <span className="ml-1">
+                        {ZONE_LABELS[leg.target_zone]}
+                        {legZoneText && <span className="ml-1 tabular-nums">{legZoneText}</span>}
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
           {isShared && (

@@ -3,9 +3,15 @@
 import { useEffect, useState } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Copy } from "lucide-react"
+import { Copy, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
+import {
+  ExtraSegmentsFields,
+  nextSegmentKey,
+  segmentIsComplete,
+  type EditableSegment,
+} from "@/components/calendar/ExtraSegmentsFields"
 import { useSharedMembers } from "@/components/calendar/SharedSessionsContext"
 import { useZoneGuide } from "@/components/calendar/ZoneGuideContext"
 import { TogetherSection } from "@/components/friends/TogetherSection"
@@ -57,6 +63,7 @@ import {
   usesMeters,
 } from "@/lib/utils/distance"
 import { REPEAT_WEEK_OPTIONS, repeatDates } from "@/lib/utils/repeat"
+import { buildExtraSegments, parseExtraPlannedSegments } from "@/lib/utils/segments"
 import { zoneTarget } from "@/lib/utils/training-zones"
 import {
   parseOptionalNumber,
@@ -99,6 +106,12 @@ export function WorkoutFormDialog({
   const members = useSharedMembers(workout?.shared_session_id ?? null)
   const [invitees, setInvitees] = useState<string[]>([])
   const [sharing, setSharing] = useState(false)
+  // Guards against a double submit (a second click/tap/Enter before the first
+  // save finishes) creating or deleting the workout twice.
+  const [submitting, setSubmitting] = useState(false)
+  // Extra sport legs (a bike+run brick, etc.) — see ExtraSegmentsFields.
+  const [extraLegs, setExtraLegs] = useState<EditableSegment[]>([])
+  const [showLegsError, setShowLegsError] = useState(false)
 
   const form = useForm<PlannedWorkoutInput>({
     resolver: zodResolver(plannedWorkoutSchema),
@@ -140,6 +153,21 @@ export function WorkoutFormDialog({
     // A fresh dialog starts with nobody picked.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setInvitees([])
+    setShowLegsError(false)
+    setExtraLegs(
+      source
+        ? parseExtraPlannedSegments(source.extra_segments).map((seg) => ({
+            key: nextSegmentKey(),
+            discipline: seg.discipline,
+            duration: seg.planned_duration_minutes?.toString() ?? "",
+            distance:
+              seg.planned_distance_km != null
+                ? kmToDisplayValue(seg.planned_distance_km, seg.discipline).toString()
+                : "",
+            zone: seg.target_zone ?? "",
+          }))
+        : []
+    )
   }, [open, workout, prefill, targetDate, form])
 
   function toastWithUndo(message: string, createdIds: number[]) {
@@ -193,6 +221,13 @@ export function WorkoutFormDialog({
   }
 
   async function onSubmit(values: PlannedWorkoutInput) {
+    if (submitting) return
+    if (!extraLegs.every(segmentIsComplete)) {
+      setShowLegsError(true)
+      return
+    }
+    setShowLegsError(false)
+    setSubmitting(true)
     try {
       const payload = {
         target_date: values.targetDate,
@@ -205,6 +240,17 @@ export function WorkoutFormDialog({
         target_zone: (values.targetZone || null) as PlannedWorkout["target_zone"],
         title: values.title || null,
         notes: values.notes || null,
+        extra_segments: buildExtraSegments(
+          extraLegs.map((leg) => ({
+            discipline: leg.discipline,
+            planned_duration_minutes: parseOptionalNumber(leg.duration),
+            planned_distance_km: (() => {
+              const typed = parseOptionalNumber(leg.distance)
+              return typed === null ? null : displayValueToKm(typed, leg.discipline)
+            })(),
+            target_zone: (leg.zone || null) as IntensityZone | null,
+          }))
+        ) as PlannedWorkout["extra_segments"],
       }
       const copies = repeatDates(values.targetDate, Number(values.repeatWeeks) || 0).map((date) => ({
         ...payload,
@@ -248,11 +294,14 @@ export function WorkoutFormDialog({
       onOpenChange(false)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong")
+    } finally {
+      setSubmitting(false)
     }
   }
 
   async function handleDelete() {
-    if (!workout) return
+    if (!workout || submitting) return
+    setSubmitting(true)
     try {
       await mutations.deleteWorkout(workout.id)
       if (workout.shared_session_id) toast.success("Workout deleted, and you left the shared session")
@@ -261,6 +310,8 @@ export function WorkoutFormDialog({
       onOpenChange(false)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong")
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -393,6 +444,14 @@ export function WorkoutFormDialog({
               )}
             />
 
+            <ExtraSegmentsFields
+              legs={extraLegs}
+              onChange={setExtraLegs}
+              zoneGuide={zoneGuide}
+              disabled={submitting}
+              showIncompleteError={showLegsError}
+            />
+
             <FormField
               control={form.control}
               name="title"
@@ -467,18 +526,26 @@ export function WorkoutFormDialog({
             <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-between">
               <div className="flex gap-2">
                 {isEditing && (
-                  <Button type="button" variant="destructive" onClick={handleDelete}>
+                  <Button type="button" variant="destructive" onClick={handleDelete} disabled={submitting}>
                     Delete
                   </Button>
                 )}
                 {isEditing && workout && onDuplicate && (
-                  <Button type="button" variant="outline" onClick={() => onDuplicate(workout)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => onDuplicate(workout)}
+                    disabled={submitting}
+                  >
                     <Copy />
                     Duplicate
                   </Button>
                 )}
               </div>
-              <Button type="submit">{isEditing ? "Save changes" : "Add workout"}</Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting && <Loader2 className="animate-spin" />}
+                {isEditing ? "Save changes" : "Add workout"}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

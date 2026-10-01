@@ -189,10 +189,10 @@ describe("parseActivityFile", () => {
 
 describe("matching activities to the plan", () => {
   const planned: PlannedCandidate[] = [
-    { id: 1, target_date: "2026-09-19", title: "Easy run", discipline: "run", planned_duration_minutes: 30, target_zone: null },
-    { id: 2, target_date: "2026-09-19", title: "Long run", discipline: "run", planned_duration_minutes: 90, target_zone: null },
-    { id: 3, target_date: "2026-09-19", title: "Swim", discipline: "swim", planned_duration_minutes: 45, target_zone: null },
-    { id: 4, target_date: "2026-09-20", title: "Run tomorrow", discipline: "run", planned_duration_minutes: 60, target_zone: null },
+    { id: 1, target_date: "2026-09-19", title: "Easy run", discipline: "run", planned_duration_minutes: 30, target_zone: null, extra_segments: null },
+    { id: 2, target_date: "2026-09-19", title: "Long run", discipline: "run", planned_duration_minutes: 90, target_zone: null, extra_segments: null },
+    { id: 3, target_date: "2026-09-19", title: "Swim", discipline: "swim", planned_duration_minutes: 45, target_zone: null, extra_segments: null },
+    { id: 4, target_date: "2026-09-20", title: "Run tomorrow", discipline: "run", planned_duration_minutes: 60, target_zone: null, extra_segments: null },
   ]
 
   it("takes the same-day, same-discipline workout closest in duration", () => {
@@ -204,6 +204,21 @@ describe("matching activities to the plan", () => {
     expect(matchPlanned("2026-09-21", "run", 60, planned, new Set())).toBeNull()
     expect(matchPlanned("2026-09-19", "bike", 60, planned, new Set())).toBeNull()
     expect(matchPlanned("2026-09-19", "swim", 45, planned, new Set([3]))).toBeNull()
+  })
+
+  it("never matches a multi-sport (brick) workout — one file can't say which leg it is", () => {
+    const onlyBrick: PlannedCandidate[] = [
+      {
+        id: 5,
+        target_date: "2026-09-19",
+        title: "Brick",
+        discipline: "run",
+        planned_duration_minutes: 30,
+        target_zone: null,
+        extra_segments: [{ discipline: "bike", planned_duration_minutes: 40, planned_distance_km: null, target_zone: null }],
+      },
+    ]
+    expect(matchPlanned("2026-09-19", "run", 30, onlyBrick, new Set())).toBeNull()
   })
 
   const activity = (start: string, seconds: number, over: Partial<ParsedActivity> = {}): ParsedActivity => ({

@@ -51,6 +51,7 @@ export type Database = {
           discipline: Database["public"]["Enums"]["discipline"]
           execution_date: string
           external_activity_id: string | null
+          extra_segments: Json | null
           id: number
           notes: string | null
           planned_workout_id: number | null
@@ -68,6 +69,7 @@ export type Database = {
           discipline: Database["public"]["Enums"]["discipline"]
           execution_date: string
           external_activity_id?: string | null
+          extra_segments?: Json | null
           id?: never
           notes?: string | null
           planned_workout_id?: number | null
@@ -85,6 +87,7 @@ export type Database = {
           discipline?: Database["public"]["Enums"]["discipline"]
           execution_date?: string
           external_activity_id?: string | null
+          extra_segments?: Json | null
           id?: never
           notes?: string | null
           planned_workout_id?: number | null
@@ -197,6 +200,7 @@ export type Database = {
         Row: {
           created_at: string
           discipline: Database["public"]["Enums"]["discipline"]
+          extra_segments: Json | null
           id: number
           notes: string | null
           planned_distance_km: number | null
@@ -211,6 +215,7 @@ export type Database = {
         Insert: {
           created_at?: string
           discipline: Database["public"]["Enums"]["discipline"]
+          extra_segments?: Json | null
           id?: never
           notes?: string | null
           planned_distance_km?: number | null
@@ -225,6 +230,7 @@ export type Database = {
         Update: {
           created_at?: string
           discipline?: Database["public"]["Enums"]["discipline"]
+          extra_segments?: Json | null
           id?: never
           notes?: string | null
           planned_distance_km?: number | null

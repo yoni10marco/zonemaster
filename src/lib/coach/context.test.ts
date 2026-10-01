@@ -86,3 +86,47 @@ describe("buildTrainingContext: sessions shared with friends", () => {
     expect(text).not.toContain("friends")
   })
 })
+
+describe("buildTrainingContext: multi-sport (brick) workouts", () => {
+  it("lists every leg of a planned brick, and totals each discipline's own legs separately", async () => {
+    const text = await buildTrainingContext(
+      fakeSupabase(
+        {
+          profiles: [],
+          completed_workouts: [
+            {
+              execution_date: "2026-09-15",
+              discipline: "bike",
+              actual_duration_minutes: 58,
+              actual_distance_km: null,
+              planned_workout_id: null,
+              extra_segments: [{ discipline: "run", actual_duration_minutes: 19, actual_distance_km: 5, avg_heart_rate: null, avg_pace_or_power: null }],
+            },
+            { execution_date: "2026-09-16", discipline: "run", actual_duration_minutes: 30, actual_distance_km: null, planned_workout_id: null },
+          ],
+          planned_workouts: [
+            {
+              id: 1,
+              target_date: "2026-09-22",
+              discipline: "bike",
+              planned_duration_minutes: 60,
+              planned_distance_km: null,
+              target_zone: "z2",
+              title: "Brick",
+              shared_session_id: null,
+              extra_segments: [{ discipline: "run", planned_duration_minutes: 20, planned_distance_km: null, target_zone: "z3" }],
+            },
+          ],
+        },
+        []
+      ),
+      "u1",
+      TODAY
+    )
+    expect(text).toContain('Bike, 60 min, Z2 + Run, 20 min, Z3 ("Brick")')
+    expect(text).toContain("Bike, 58 min + Run, 19 min")
+    // The brick's run leg (19 min) is counted with the plain run session (30 min): 2 sessions, 49 min.
+    expect(text).toContain("- Run: 2 sessions, 49 min")
+    expect(text).toContain("- Bike: 1 sessions, 58 min")
+  })
+})

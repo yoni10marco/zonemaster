@@ -23,6 +23,8 @@ export function copyFields(workout: PlannedWorkout, targetDate: string): Workout
     planned_duration_minutes: workout.planned_duration_minutes,
     planned_distance_km: workout.planned_distance_km,
     target_zone: workout.target_zone,
+    // A multi-sport workout's extra legs (bike+run, etc.) travel with it.
+    extra_segments: workout.extra_segments,
   }
 }
 
@@ -34,6 +36,7 @@ type Comparable = Pick<
   | "planned_duration_minutes"
   | "planned_distance_km"
   | "target_zone"
+  | "extra_segments"
 >
 
 function sameWorkout(a: Comparable, b: Comparable): boolean {
@@ -43,7 +46,8 @@ function sameWorkout(a: Comparable, b: Comparable): boolean {
     (a.title ?? "") === (b.title ?? "") &&
     (a.planned_duration_minutes ?? null) === (b.planned_duration_minutes ?? null) &&
     (a.planned_distance_km ?? null) === (b.planned_distance_km ?? null) &&
-    (a.target_zone ?? null) === (b.target_zone ?? null)
+    (a.target_zone ?? null) === (b.target_zone ?? null) &&
+    JSON.stringify(a.extra_segments ?? null) === JSON.stringify(b.extra_segments ?? null)
   )
 }
 

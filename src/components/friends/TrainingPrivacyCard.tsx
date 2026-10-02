@@ -13,9 +13,10 @@ import { createClient } from "@/lib/supabase/client"
 
 /**
  * Whether friends can see your planned workouts for the next and previous 7
- * days (in the Friends page's Training tab). On by default; this is the one
- * place to turn it off. Never affects shared sessions (always visible to the
- * people in them) or anything outside that 2-week window.
+ * days (a "Training" button on your row in their Friends list). On by
+ * default; this is the one place to turn it off. Never affects shared
+ * sessions (always visible to the people in them) or anything outside that
+ * 2-week window.
  */
 export function TrainingPrivacyCard() {
   const { profile, loading, refetch } = useProfile()
@@ -63,8 +64,8 @@ export function TrainingPrivacyCard() {
           Training visibility
         </CardTitle>
         <CardDescription>
-          When on, your friends can see what you have planned for the next and previous 7 days in their
-          Training tab, and copy it to their own calendar. They never see anything outside that window, your
+          When on, your friends can see what you have planned for the next and previous 7 days from your row
+          in their Friends list, and copy it to their own calendar. They never see anything outside that window, your
           completed workouts, or your notes elsewhere in the app.
         </CardDescription>
       </CardHeader>

@@ -42,8 +42,8 @@ export function ZoneLogo({ className }: { className?: string }) {
       <line
         x1={CENTER}
         y1={CENTER}
-        x2={NEEDLE_X}
-        y2={NEEDLE_Y}
+        x2={NEEDLE_X.toFixed(2)}
+        y2={NEEDLE_Y.toFixed(2)}
         stroke="currentColor"
         strokeWidth={30}
         strokeLinecap="round"

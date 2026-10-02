@@ -6,6 +6,7 @@ import { CalendarDays, LayoutDashboard, Sparkles, UserRound, Users } from "lucid
 
 import { useFriendBadge } from "@/hooks/useFriendBadge"
 import { NavLinkPending } from "@/components/layout/NavLinkPending"
+import { useStartNavigationProgress } from "@/components/layout/NavigationProgress"
 import { cn } from "@/lib/utils"
 
 const TABS = [
@@ -24,6 +25,7 @@ const TABS = [
 export function BottomNav() {
   const pathname = usePathname()
   const waiting = useFriendBadge()
+  const startNavigation = useStartNavigationProgress()
 
   return (
     <nav
@@ -36,6 +38,7 @@ export function BottomNav() {
           <Link
             key={href}
             href={href}
+            onClick={startNavigation}
             aria-label={label === "Friends" && waiting > 0 ? `Friends, ${waiting} waiting` : label}
             aria-current={active ? "page" : undefined}
             className={cn(

@@ -5,13 +5,16 @@ import { Users } from "lucide-react"
 
 import { useFriendBadge } from "@/hooks/useFriendBadge"
 import { NavLinkPending } from "@/components/layout/NavLinkPending"
+import { useStartNavigationProgress } from "@/components/layout/NavigationProgress"
 
 export function FriendsNavLink() {
   const waiting = useFriendBadge()
+  const startNavigation = useStartNavigationProgress()
 
   return (
     <Link
       href="/friends"
+      onClick={startNavigation}
       aria-label={waiting > 0 ? `Friends, ${waiting} waiting` : "Friends"}
       className="relative flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
     >

@@ -1,18 +1,24 @@
+"use client"
+
 import Link from "next/link"
 import { CalendarDays, LayoutDashboard, Sparkles } from "lucide-react"
 
 import { FriendsNavLink } from "@/components/friends/FriendsNavLink"
 import { NavLinkPending } from "@/components/layout/NavLinkPending"
+import { useStartNavigationProgress } from "@/components/layout/NavigationProgress"
 import { UserMenu } from "@/components/layout/UserMenu"
 import { ZoneLogo } from "@/components/layout/ZoneLogo"
 
 export function NavBar({ email }: { email: string }) {
+  const startNavigation = useStartNavigationProgress()
+
   return (
     <header className="border-b bg-background">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-2 px-3 sm:px-4">
         <Link
           href="/calendar"
           aria-label="Zone Master"
+          onClick={startNavigation}
           className="flex shrink-0 items-center gap-1.5 font-heading text-base font-semibold text-primary sm:text-lg"
         >
           <ZoneLogo className="size-7 shrink-0" />
@@ -22,6 +28,7 @@ export function NavBar({ email }: { email: string }) {
         <nav className="hidden min-w-0 items-center gap-3 sm:flex sm:gap-6">
           <Link
             href="/calendar"
+            onClick={startNavigation}
             className="flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
           >
             <CalendarDays className="size-4 shrink-0" />
@@ -30,6 +37,7 @@ export function NavBar({ email }: { email: string }) {
           </Link>
           <Link
             href="/dashboard"
+            onClick={startNavigation}
             className="flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
           >
             <LayoutDashboard className="size-4 shrink-0" />
@@ -38,6 +46,7 @@ export function NavBar({ email }: { email: string }) {
           </Link>
           <Link
             href="/coach"
+            onClick={startNavigation}
             className="flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
           >
             <Sparkles className="size-4 shrink-0" />

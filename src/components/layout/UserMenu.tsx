@@ -15,11 +15,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useInstallApp } from "@/hooks/useInstallApp"
+import { useStartNavigationProgress } from "@/components/layout/NavigationProgress"
 import { createClient } from "@/lib/supabase/client"
 
 export function UserMenu({ email }: { email: string }) {
   const router = useRouter()
   const installApp = useInstallApp()
+  const startNavigation = useStartNavigationProgress()
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -49,7 +51,9 @@ export function UserMenu({ email }: { email: string }) {
         <DropdownMenuLabel>Signed in as {email}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/settings">Settings</Link>
+          <Link href="/settings" onClick={startNavigation}>
+            Settings
+          </Link>
         </DropdownMenuItem>
         {installApp.available && (
           <DropdownMenuItem onClick={handleInstall}>

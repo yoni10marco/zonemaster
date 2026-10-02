@@ -28,9 +28,11 @@ export function useStartNavigationProgress(): () => void {
  * plain client state: a nav link's onClick flips it on, and it goes off again
  * the moment the new page's content actually mounts (or after MAX_OVERLAY_MS,
  * whichever comes first, so it can never get stuck). Wrap the whole layout
- * (so every nav link can reach `start`), and place `<NavigationProgressOverlay>`
- * wherever the overlay should actually render — typically just inside `<main>`,
- * so the nav around it stays visible and interactive while it shows.
+ * (so every nav link can reach `start`) and place `<NavigationProgressOverlay>`
+ * anywhere inside it — it covers the full viewport itself (`position: fixed`),
+ * deliberately including the nav, since the nav isn't pinned to the screen and
+ * can be scrolled out of view, which would otherwise leave a gap showing
+ * stale content from the page being navigated away from.
  */
 export function NavigationProgressProvider({ children }: { children: React.ReactNode }) {
   const [active, setActive] = useState(false)
@@ -58,13 +60,27 @@ export function NavigationProgressProvider({ children }: { children: React.React
   }, [])
 
   // Lock background scrolling while the overlay is up, so it can't scroll out
-  // of view on a page that was taller than the viewport.
+  // of view on a page that was taller than the viewport. `overflow: hidden`
+  // alone hides the scrollbar and blocks keyboard scrolling, but some
+  // trackpad/touch input still gets through it in at least some browsers, so
+  // a non-passive wheel/touchmove listener backs it up by refusing the
+  // scroll outright.
   useEffect(() => {
     if (!active) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = "hidden"
+    const html = document.documentElement
+    const body = document.body
+    const prevHtml = html.style.overflow
+    const prevBody = body.style.overflow
+    html.style.overflow = "hidden"
+    body.style.overflow = "hidden"
+    const prevent = (e: Event) => e.preventDefault()
+    document.addEventListener("wheel", prevent, { passive: false })
+    document.addEventListener("touchmove", prevent, { passive: false })
     return () => {
-      document.body.style.overflow = prev
+      html.style.overflow = prevHtml
+      body.style.overflow = prevBody
+      document.removeEventListener("wheel", prevent)
+      document.removeEventListener("touchmove", prevent)
     }
   }, [active])
 
@@ -78,7 +94,7 @@ export function NavigationProgressOverlay() {
   const ctx = useContext(NavigationProgressContext)
   if (!ctx?.active) return null
   return (
-    <div className="fixed inset-x-0 top-14 bottom-0 z-30 flex flex-col items-center justify-center gap-3 bg-background text-muted-foreground">
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-background text-muted-foreground">
       <ZoneLogo className="size-10 animate-spin" />
       <p className="text-sm">Loading…</p>
     </div>

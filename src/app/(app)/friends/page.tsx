@@ -9,11 +9,13 @@ import { SessionInvitesList } from "@/components/friends/SessionInvitesList"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useFriends } from "@/hooks/useFriends"
+import { useFriendsWorkouts } from "@/hooks/useFriendsWorkouts"
 import { useSessionInvites } from "@/hooks/useSessionInvites"
 
 export default function FriendsPage() {
   const friends = useFriends()
   const sessions = useSessionInvites()
+  const training = useFriendsWorkouts()
   // Everything waiting for an answer: friend requests and session invitations.
   const waiting = friends.incoming.length + sessions.invites.length
   const nothingPending = waiting === 0 && friends.outgoing.length === 0
@@ -33,7 +35,8 @@ export default function FriendsPage() {
           Friends
         </h1>
         <p className="text-sm text-muted-foreground">
-          Friends only ever see the sessions you plan together, never the rest of your calendar.
+          Friends only ever see the sessions you plan together, plus any planned workouts you choose to
+          share — see Settings.
         </p>
       </div>
 
@@ -67,6 +70,7 @@ export default function FriendsPage() {
             <FriendsList
               friends={friends.friends}
               blocked={friends.blocked}
+              workouts={training.workouts}
               onRemove={friends.removeFriend}
               onBlock={friends.blockUser}
               onUnblock={friends.unblockUser}

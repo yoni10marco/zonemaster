@@ -242,7 +242,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "planned_workouts_shared_session_id_fkey"
+            columns: ["shared_session_id"]
+            isOneToOne: false
+            referencedRelation: "shared_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -250,12 +258,13 @@ export type Database = {
           email: string
           fitness_level: Database["public"]["Enums"]["fitness_level"]
           friend_code: string
+          ftp_watts: number | null
           id: string
           max_heart_rate: number | null
           primary_discipline: Database["public"]["Enums"]["discipline"]
           resting_heart_rate: number | null
-          ftp_watts: number | null
           run_threshold_pace_sec: number | null
+          share_planned_workouts: boolean
           swim_css_sec: number | null
           target_race_date: string | null
           target_race_distance: string | null
@@ -267,12 +276,13 @@ export type Database = {
           email: string
           fitness_level?: Database["public"]["Enums"]["fitness_level"]
           friend_code?: string
+          ftp_watts?: number | null
           id: string
           max_heart_rate?: number | null
           primary_discipline?: Database["public"]["Enums"]["discipline"]
           resting_heart_rate?: number | null
-          ftp_watts?: number | null
           run_threshold_pace_sec?: number | null
+          share_planned_workouts?: boolean
           swim_css_sec?: number | null
           target_race_date?: string | null
           target_race_distance?: string | null
@@ -284,12 +294,13 @@ export type Database = {
           email?: string
           fitness_level?: Database["public"]["Enums"]["fitness_level"]
           friend_code?: string
+          ftp_watts?: number | null
           id?: string
           max_heart_rate?: number | null
           primary_discipline?: Database["public"]["Enums"]["discipline"]
           resting_heart_rate?: number | null
-          ftp_watts?: number | null
           run_threshold_pace_sec?: number | null
+          share_planned_workouts?: boolean
           swim_css_sec?: number | null
           target_race_date?: string | null
           target_race_distance?: string | null
@@ -323,7 +334,22 @@ export type Database = {
           status?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "shared_session_members_planned_workout_id_fkey"
+            columns: ["planned_workout_id"]
+            isOneToOne: false
+            referencedRelation: "planned_workouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_session_members_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "shared_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shared_sessions: {
         Row: {
@@ -369,22 +395,54 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      are_friends: { Args: { a: string; b: string }; Returns: boolean }
       block_user: { Args: { p_user_id: string }; Returns: undefined }
-      cancel_friend_request: { Args: { p_friendship_id: number }; Returns: undefined }
-      delete_my_account: { Args: never; Returns: undefined }
+      cancel_friend_request: {
+        Args: { p_friendship_id: number }
+        Returns: undefined
+      }
       create_shared_session: {
         Args: { p_friend_ids: string[]; p_planned_workout_id: number }
         Returns: number
       }
+      delete_my_account: { Args: never; Returns: undefined }
+      detach_members_between: {
+        Args: { a: string; b: string }
+        Returns: undefined
+      }
       find_user: {
         Args: { p_friend_code: string; p_username: string }
-        Returns: { relationship: string; user_id: string; username: string }[]
+        Returns: {
+          relationship: string
+          user_id: string
+          username: string
+        }[]
       }
+      generate_friend_code: { Args: never; Returns: string }
       invite_to_shared_session: {
         Args: { p_friend_ids: string[]; p_session_id: number }
         Returns: undefined
       }
-      leave_shared_session: { Args: { p_session_id: number }; Returns: undefined }
+      leave_shared_session: {
+        Args: { p_session_id: number }
+        Returns: undefined
+      }
+      list_friends_workouts: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          discipline: Database["public"]["Enums"]["discipline"]
+          extra_segments: Json
+          notes: string
+          owner_id: string
+          planned_distance_km: number
+          planned_duration_minutes: number
+          target_date: string
+          target_zone: Database["public"]["Enums"]["intensity_zone"]
+          title: string
+          username: string
+          workout_id: number
+        }[]
+      }
       list_friendships: {
         Args: never
         Returns: {
@@ -413,7 +471,14 @@ export type Database = {
       }
       pending_counts: {
         Args: never
-        Returns: { friend_requests: number; session_invites: number }[]
+        Returns: {
+          friend_requests: number
+          session_invites: number
+        }[]
+      }
+      prune_shared_session: {
+        Args: { p_session_id: number }
+        Returns: undefined
       }
       remove_friend: { Args: { p_user_id: string }; Returns: undefined }
       respond_friend_request: {
@@ -438,6 +503,8 @@ export type Database = {
         }[]
       }
       unblock_user: { Args: { p_user_id: string }; Returns: undefined }
+      valid_completed_segments: { Args: { data: Json }; Returns: boolean }
+      valid_planned_segments: { Args: { data: Json }; Returns: boolean }
     }
     Enums: {
       discipline: "swim" | "bike" | "run" | "strength" | "other"

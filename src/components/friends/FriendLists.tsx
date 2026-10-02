@@ -1,13 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { Ban, Check, Undo2, UserMinus, X } from "lucide-react"
+import { Ban, Check, Eye, Undo2, UserMinus, X } from "lucide-react"
 import { toast } from "sonner"
 
 import { Avatar } from "@/components/friends/Avatar"
 import { ConfirmDialog } from "@/components/friends/ConfirmDialog"
+import { FriendTrainingDialog } from "@/components/friends/FriendTrainingDialog"
 import { Button } from "@/components/ui/button"
 import type { Friendship } from "@/hooks/useFriends"
+import type { FriendWorkout } from "@/hooks/useFriendsWorkouts"
 
 const NAME_FALLBACK = "Someone"
 
@@ -28,6 +30,10 @@ function errorMessage(err: unknown) {
 type FriendsListProps = {
   friends: Friendship[]
   blocked: Friendship[]
+  /** Shared planned workouts from every friend, last/next 7 days — filtered
+   *  per row to show each friend's "Training" entry point only when they
+   *  actually have something shared for this window. */
+  workouts: FriendWorkout[]
   onRemove: (userId: string) => Promise<void>
   onBlock: (userId: string) => Promise<void>
   onUnblock: (userId: string) => Promise<void>
@@ -35,9 +41,10 @@ type FriendsListProps = {
 
 type Pending = { kind: "remove" | "block"; friendship: Friendship } | null
 
-export function FriendsList({ friends, blocked, onRemove, onBlock, onUnblock }: FriendsListProps) {
+export function FriendsList({ friends, blocked, workouts, onRemove, onBlock, onUnblock }: FriendsListProps) {
   const [pending, setPending] = useState<Pending>(null)
   const [busy, setBusy] = useState(false)
+  const [trainingFriend, setTrainingFriend] = useState<Friendship | null>(null)
 
   async function confirm() {
     if (!pending) return
@@ -68,28 +75,42 @@ export function FriendsList({ friends, blocked, onRemove, onBlock, onUnblock }: 
         </p>
       ) : (
         <ul className="space-y-2">
-          {friends.map((friend) => (
-            <Row key={friend.friendshipId} friendship={friend}>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setPending({ kind: "remove", friendship: friend })}
-                aria-label={`Remove ${friend.username ?? NAME_FALLBACK} from friends`}
-              >
-                <UserMinus />
-                <span className="hidden sm:inline">Unfriend</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setPending({ kind: "block", friendship: friend })}
-                aria-label={`Block ${friend.username ?? NAME_FALLBACK}`}
-              >
-                <Ban />
-                <span className="hidden sm:inline">Block</span>
-              </Button>
-            </Row>
-          ))}
+          {friends.map((friend) => {
+            const friendWorkouts = workouts.filter((w) => w.ownerId === friend.userId)
+            return (
+              <Row key={friend.friendshipId} friendship={friend}>
+                {friendWorkouts.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setTrainingFriend(friend)}
+                    aria-label={`View ${friend.username ?? NAME_FALLBACK}'s planned training`}
+                  >
+                    <Eye />
+                    <span className="hidden sm:inline">Training</span>
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setPending({ kind: "remove", friendship: friend })}
+                  aria-label={`Remove ${friend.username ?? NAME_FALLBACK} from friends`}
+                >
+                  <UserMinus />
+                  <span className="hidden sm:inline">Unfriend</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setPending({ kind: "block", friendship: friend })}
+                  aria-label={`Block ${friend.username ?? NAME_FALLBACK}`}
+                >
+                  <Ban />
+                  <span className="hidden sm:inline">Block</span>
+                </Button>
+              </Row>
+            )
+          })}
         </ul>
       )}
 
@@ -132,6 +153,15 @@ export function FriendsList({ friends, blocked, onRemove, onBlock, onUnblock }: 
         busy={busy}
         onConfirm={confirm}
       />
+
+      {trainingFriend && (
+        <FriendTrainingDialog
+          open
+          username={trainingFriend.username}
+          workouts={workouts.filter((w) => w.ownerId === trainingFriend.userId)}
+          onOpenChange={(open) => !open && setTrainingFriend(null)}
+        />
+      )}
     </div>
   )
 }

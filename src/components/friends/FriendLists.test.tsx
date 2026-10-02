@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { FriendsList, RequestsList } from "@/components/friends/FriendLists"
 import type { Friendship } from "@/hooks/useFriends"
+import type { FriendWorkout } from "@/hooks/useFriendsWorkouts"
 
 const toastSuccess = vi.fn()
 const toastError = vi.fn()
@@ -19,6 +20,23 @@ function person(id: number, username: string | null, kind: Friendship["kind"]): 
   return { friendshipId: id, userId: `user-${id}`, username, kind, createdAt: "2026-09-19T10:00:00Z" }
 }
 
+function workout(ownerId: string, overrides: Partial<FriendWorkout> = {}): FriendWorkout {
+  return {
+    workoutId: 1,
+    ownerId,
+    username: "bobby",
+    target_date: "2026-10-05",
+    title: "Easy run",
+    notes: null,
+    discipline: "run",
+    planned_duration_minutes: 30,
+    planned_distance_km: null,
+    target_zone: null,
+    extra_segments: null,
+    ...overrides,
+  }
+}
+
 beforeEach(() => {
   toastSuccess.mockClear()
   toastError.mockClear()
@@ -26,6 +44,7 @@ beforeEach(() => {
 
 describe("FriendsList", () => {
   const handlers = () => ({
+    workouts: [],
     onRemove: vi.fn(async () => {}),
     onBlock: vi.fn(async () => {}),
     onUnblock: vi.fn(async () => {}),
@@ -41,6 +60,39 @@ describe("FriendsList", () => {
     render(<FriendsList friends={[person(1, "bobby", "friend"), person(2, "dora", "friend")]} blocked={[]} {...handlers()} />)
     expect(screen.getByText("bobby")).toBeInTheDocument()
     expect(screen.getByText("dora")).toBeInTheDocument()
+  })
+
+  it("only shows a Training entry for friends who have shared something this week", () => {
+    render(
+      <FriendsList
+        friends={[person(1, "bobby", "friend"), person(2, "dora", "friend")]}
+        blocked={[]}
+        {...{ ...handlers(), workouts: [workout("user-1")] }}
+      />
+    )
+    expect(screen.getByRole("button", { name: /view bobby's planned training/i })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /view dora's planned training/i })).not.toBeInTheDocument()
+  })
+
+  it("opens a friend's training in a dialog scoped to just them", async () => {
+    render(
+      <FriendsList
+        friends={[person(1, "bobby", "friend"), person(2, "dora", "friend")]}
+        blocked={[]}
+        {...{
+          ...handlers(),
+          workouts: [
+            workout("user-1", { workoutId: 1, title: "Easy run" }),
+            workout("user-2", { workoutId: 2, username: "dora", title: "Long ride" }),
+          ],
+        }}
+      />
+    )
+    await userEvent.setup().click(screen.getByRole("button", { name: /view bobby's planned training/i }))
+    const dialog = within(await screen.findByRole("dialog"))
+    expect(dialog.getByText("bobby's training")).toBeInTheDocument()
+    expect(dialog.getByText("Easy run")).toBeInTheDocument()
+    expect(dialog.queryByText("Long ride")).not.toBeInTheDocument()
   })
 
   it("asks before unfriending, and does nothing if you cancel", async () => {

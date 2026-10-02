@@ -57,6 +57,17 @@ export function NavigationProgressProvider({ children }: { children: React.React
     if (timer.current) clearTimeout(timer.current)
   }, [])
 
+  // Lock background scrolling while the overlay is up, so it can't scroll out
+  // of view on a page that was taller than the viewport.
+  useEffect(() => {
+    if (!active) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [active])
+
   return (
     <NavigationProgressContext.Provider value={{ active, start }}>{children}</NavigationProgressContext.Provider>
   )
@@ -67,7 +78,7 @@ export function NavigationProgressOverlay() {
   const ctx = useContext(NavigationProgressContext)
   if (!ctx?.active) return null
   return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-background py-20 text-muted-foreground">
+    <div className="fixed inset-x-0 top-14 bottom-0 z-30 flex flex-col items-center justify-center gap-3 bg-background text-muted-foreground">
       <ZoneLogo className="size-10 animate-spin" />
       <p className="text-sm">Loading…</p>
     </div>

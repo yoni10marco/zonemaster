@@ -68,8 +68,8 @@ describe("ProgressSection", () => {
   it("describes the weekly chart for screen readers", () => {
     renderProgress()
     const chart = screen.getByRole("img", { name: /weekly sessions/i })
-    // Sep 14-20: two sessions planned (14th and 16th), one completed (15th).
-    expect(chart).toHaveAccessibleName(/week of Sep 14: 1 completed of 2 planned/)
+    // Sep 13-19: two sessions planned (14th and 16th), one completed (15th).
+    expect(chart).toHaveAccessibleName(/week of Sep 13: 1 completed of 2 planned/)
     expect(screen.getByText("Last 8 weeks")).toBeInTheDocument()
   })
 })

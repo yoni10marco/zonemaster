@@ -12,7 +12,7 @@ import {
   subWeeks,
 } from "date-fns"
 
-const WEEK_OPTIONS = { weekStartsOn: 1 as const } // weeks start on Monday
+const WEEK_OPTIONS = { weekStartsOn: 0 as const } // weeks start on Sunday
 
 export function toISODate(date: Date): string {
   return format(date, "yyyy-MM-dd")

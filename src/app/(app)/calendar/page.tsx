@@ -253,7 +253,7 @@ export default function CalendarPage() {
   async function handleCopyLastWeek() {
     setCopying(true)
     try {
-      // In week view the range starts on the visible Monday.
+      // In week view the range starts on the visible Sunday.
       const created = await copyWeek(toISODate(subWeeks(range.start, 1)), 7)
       if (created.length === 0) {
         toast.info("Nothing to copy — last week is empty, or already copied here")

@@ -2,18 +2,18 @@ import { describe, expect, it } from "vitest"
 
 import { raceCountdown, weekStreak, weeklyTrend } from "@/lib/utils/progress"
 
-// Fri 2026-09-18 — that week is Mon 2026-09-14 .. Sun 2026-09-20.
+// Fri 2026-09-18 — that week is Sun 2026-09-13 .. Sat 2026-09-19.
 const TODAY = new Date(2026, 8, 18)
 
 describe("weeklyTrend", () => {
-  it("buckets sessions into Monday-based weeks, oldest first", () => {
+  it("buckets sessions into Sunday-based weeks, oldest first", () => {
     const trend = weeklyTrend(
-      ["2026-09-14", "2026-09-20", "2026-09-07", "2026-08-01"], // the last one is outside 3 weeks
+      ["2026-09-14", "2026-09-19", "2026-09-07", "2026-08-01"], // the last one is outside 3 weeks
       ["2026-09-15", "2026-09-08", "2026-09-09", "2026-09-10"],
       3,
       TODAY
     )
-    expect(trend.map((w) => w.start)).toEqual(["2026-08-31", "2026-09-07", "2026-09-14"])
+    expect(trend.map((w) => w.start)).toEqual(["2026-08-30", "2026-09-06", "2026-09-13"])
     expect(trend.map((w) => [w.planned, w.completed])).toEqual([
       [0, 0],
       [1, 3],
@@ -22,10 +22,10 @@ describe("weeklyTrend", () => {
     expect(trend.map((w) => w.isCurrent)).toEqual([false, false, true])
   })
 
-  it("puts a Sunday session in the week that started the previous Monday", () => {
-    const trend = weeklyTrend([], ["2026-09-13"], 2, TODAY) // a Sunday
-    expect(trend[0]).toMatchObject({ start: "2026-09-07", completed: 1 })
-    expect(trend[1]).toMatchObject({ start: "2026-09-14", completed: 0 })
+  it("puts a Saturday session in the week that started that Sunday", () => {
+    const trend = weeklyTrend([], ["2026-09-12"], 2, TODAY) // a Saturday
+    expect(trend[0]).toMatchObject({ start: "2026-09-06", completed: 1 })
+    expect(trend[1]).toMatchObject({ start: "2026-09-13", completed: 0 })
   })
 })
 

@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
         {
           role: "user",
           text: [
-            `Design a training week for me from ${weekStart} (Monday) to ${weekEnd} (Sunday).`,
+            `Design a training week for me from ${weekStart} (Sunday) to ${weekEnd} (Saturday).`,
             "Return a summary of the week's intent in at most two sentences (do not list the days; the drafts show that), plus the workouts as drafts.",
             "Rules: every date must fall inside that week; use only the disciplines swim, bike, run, strength or other;",
             "give each workout a durationMinutes and/or distanceKm (always kilometers, also for swims: a 1500 m swim is 1.5); use zones z1 to z5 for intensity; keep a sensible mix and at least one rest day;",

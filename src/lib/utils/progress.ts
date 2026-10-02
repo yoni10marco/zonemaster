@@ -1,13 +1,13 @@
 import { differenceInCalendarDays, format, parseISO, startOfWeek, subWeeks } from "date-fns"
 
-const WEEK_OPTIONS = { weekStartsOn: 1 as const } // weeks start on Monday
+const WEEK_OPTIONS = { weekStartsOn: 0 as const } // weeks start on Sunday
 
 function weekStartISO(date: Date): string {
   return format(startOfWeek(date, WEEK_OPTIONS), "yyyy-MM-dd")
 }
 
 export type WeekBucket = {
-  /** Monday of the week, yyyy-MM-dd. */
+  /** Sunday of the week, yyyy-MM-dd. */
   start: string
   planned: number
   completed: number
@@ -46,7 +46,7 @@ export type WeekStreak = { current: number; best: number }
 /**
  * Consecutive weeks with at least one completed workout. The current week only
  * counts once it has a workout, but an empty current week does not break a
- * streak (it is still in progress), so the number does not drop to 0 every Monday.
+ * streak (it is still in progress), so the number does not drop to 0 every Sunday.
  */
 export function weekStreak(completedDates: string[], today: Date): WeekStreak {
   const weeks = new Set(completedDates.map((d) => weekStartISO(parseISO(d))))

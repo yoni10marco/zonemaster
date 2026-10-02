@@ -129,13 +129,13 @@ export async function buildTrainingContext(
   const plannedDone = past.length - missed.length
 
   const lines: string[] = []
-  lines.push(`Today: ${today} (${format(todayDate, "EEEE")}). Weeks run Monday to Sunday.`)
+  lines.push(`Today: ${today} (${format(todayDate, "EEEE")}). Weeks run Sunday to Saturday.`)
 
   if (profile) {
     const goal = profile.target_race_date
       ? `${profile.target_race_distance || "race"} on ${profile.target_race_date} (${Math.max(
           0,
-          differenceInCalendarWeeks(parseISO(profile.target_race_date), todayDate, { weekStartsOn: 1 })
+          differenceInCalendarWeeks(parseISO(profile.target_race_date), todayDate, { weekStartsOn: 0 })
         )} weeks away)`
       : "no target race set"
     lines.push(

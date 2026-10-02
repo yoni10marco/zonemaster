@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import { CalendarDays, LayoutDashboard, Sparkles, UserRound, Users } from "lucide-react"
 
 import { useFriendBadge } from "@/hooks/useFriendBadge"
+import { NavLinkPending } from "@/components/layout/NavLinkPending"
 import { cn } from "@/lib/utils"
 
 const TABS = [
@@ -44,6 +45,7 @@ export function BottomNav() {
           >
             <Icon className="size-5" />
             {label}
+            <NavLinkPending />
             {label === "Friends" && waiting > 0 && (
               <span
                 aria-hidden="true"

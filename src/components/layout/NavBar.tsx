@@ -2,6 +2,7 @@ import Link from "next/link"
 import { CalendarDays, LayoutDashboard, Sparkles } from "lucide-react"
 
 import { FriendsNavLink } from "@/components/friends/FriendsNavLink"
+import { NavLinkPending } from "@/components/layout/NavLinkPending"
 import { UserMenu } from "@/components/layout/UserMenu"
 import { ZoneLogo } from "@/components/layout/ZoneLogo"
 
@@ -25,6 +26,7 @@ export function NavBar({ email }: { email: string }) {
           >
             <CalendarDays className="size-4 shrink-0" />
             <span className="hidden sm:inline">Calendar</span>
+            <NavLinkPending />
           </Link>
           <Link
             href="/dashboard"
@@ -32,6 +34,7 @@ export function NavBar({ email }: { email: string }) {
           >
             <LayoutDashboard className="size-4 shrink-0" />
             <span className="hidden sm:inline">Dashboard</span>
+            <NavLinkPending />
           </Link>
           <Link
             href="/coach"
@@ -39,6 +42,7 @@ export function NavBar({ email }: { email: string }) {
           >
             <Sparkles className="size-4 shrink-0" />
             <span className="hidden sm:inline">Coach</span>
+            <NavLinkPending />
           </Link>
           <FriendsNavLink />
         </nav>

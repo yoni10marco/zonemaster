@@ -4,6 +4,7 @@ import Link from "next/link"
 import { Users } from "lucide-react"
 
 import { useFriendBadge } from "@/hooks/useFriendBadge"
+import { NavLinkPending } from "@/components/layout/NavLinkPending"
 
 export function FriendsNavLink() {
   const waiting = useFriendBadge()
@@ -16,6 +17,7 @@ export function FriendsNavLink() {
     >
       <Users className="size-4 shrink-0" />
       <span className="hidden sm:inline">Friends</span>
+      <NavLinkPending />
       {waiting > 0 && (
         <span
           aria-hidden="true"

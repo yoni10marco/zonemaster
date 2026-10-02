@@ -30,9 +30,12 @@ export function useStartNavigationProgress(): () => void {
  * whichever comes first, so it can never get stuck). Wrap the whole layout
  * (so every nav link can reach `start`) and place `<NavigationProgressOverlay>`
  * anywhere inside it — it covers the full viewport itself (`position: fixed`),
- * deliberately including the nav, since the nav isn't pinned to the screen and
- * can be scrolled out of view, which would otherwise leave a gap showing
- * stale content from the page being navigated away from.
+ * deliberately including the top nav, since that isn't pinned to the screen
+ * and can be scrolled out of view, which would otherwise leave a gap showing
+ * stale content from the page being navigated away from. It stays below the
+ * mobile bottom tab bar's z-index, though (see BottomNav's `z-40`), so that
+ * one stays visible and usable — it's always fixed in place already, so
+ * there's no equivalent gap risk for it.
  */
 export function NavigationProgressProvider({ children }: { children: React.ReactNode }) {
   const [active, setActive] = useState(false)
@@ -94,7 +97,7 @@ export function NavigationProgressOverlay() {
   const ctx = useContext(NavigationProgressContext)
   if (!ctx?.active) return null
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-background text-muted-foreground">
+    <div className="fixed inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-background text-muted-foreground">
       <ZoneLogo className="size-10 animate-spin" />
       <p className="text-sm">Loading…</p>
     </div>
